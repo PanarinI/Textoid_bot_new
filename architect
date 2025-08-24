@@ -1,0 +1,74 @@
+my_textoid_bot/
+├── main.py             # Точка входа: переключение polling / webhook
+├── config.py           # Настройки, флаги (например, USE_WEBHOOK = True/False), токен и пр.
+├── bot.py              # Инициализация Bot, Dispatcher, логирование
+│
+├── handlers/
+│   └── textoid_handlers.py   # Обработчики команд, callback-query, управление FSM
+│
+├── states.py           # Определение FSM StatesGroup и состояний
+│
+├── generator.py        # Модуль генерации (mock-запрос к OpenAI: "Как дела?")
+│
+└── logging_config.py   # Настройка базового логирования
+
+
+
+
+main.py
+
+Загружает конфигурацию из config.py, включая флаг USE_WEBHOOK.
+
+Инициализирует логирование, импортирует bot, dp.
+
+Решает, запускать polling или webhook:
+
+Polling: await dp.start_polling(bot)
+
+Webhook: await bot.set_webhook(...) и await dp.start_webhook(...)
+Функции старта/шутдауна объединяются с FSM и логированием.
+
+config.py
+
+Хранит токен, настройки, флаг USE_WEBHOOK = True или False, URL webhook, другие константы.
+
+bot.py
+
+Настраивает объекты Bot(token, parse_mode), Dispatcher(bot, storage=MemoryStorage()).
+
+Подключает handlers.
+
+Настраивает логирование через logging_config.py.
+
+handlers/textoid_handlers.py
+
+Обрабатывает:
+
+Команда /start → меню с inline-кнопками («Создать текстоид», «Библиотека», «О проекте»).
+
+Callback-query для навигации по меню: выбор «по названию» / «на тему» → установка состояний FSM.
+
+При получении текстовой темы → вызывается функция из generator.py (mock-запрос) → вывод результата + клавиатура («повторить», «сменить тему», «поделиться»).
+
+Обработка кнопок действия.
+
+states.py
+
+Определяет FSM:
+
+from aiogram.fsm.state import State, StatesGroup
+
+class TextoidStates(StatesGroup):
+    waiting_for_input = State()
+
+generator.py
+
+Функция generate_textoid(prompt: str) -> str, которая сейчас просто отправляет mock-запрос к API:
+
+# Пример:
+async def generate_textoid(prompt: str) -> str:
+    return "Mock-ответ на запрос: 'Как дела?'"
+
+logging_config.py
+
+Настройка стандартного логирования Python: logging.basicConfig(level=logging.INFO, format=...).

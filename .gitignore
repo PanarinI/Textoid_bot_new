@@ -1,0 +1,9 @@
+.venv
+.venv/Lib
+.env
+.idea/
+.idea/workspace.xml
+__pycache__/
+*.pyc
+
+bot/bot.log
