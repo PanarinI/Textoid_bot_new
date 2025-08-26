@@ -17,4 +17,4 @@ ENV PYTHONUNBUFFERED=1
 EXPOSE 8080
 
 # Команда запуска
-CMD ["python", "main.py"]
+CMD ["python", "app/main.py"]
