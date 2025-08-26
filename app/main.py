@@ -6,7 +6,7 @@ from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_applicati
 
 from logging_config import setup_logging
 from loader import bot, dp
-from ..handlers.textoid_handlers import router as textoid_router
+from handlers.textoid_handlers import router as textoid_router
 
 # Настройка логирования сразу
 setup_logging()
