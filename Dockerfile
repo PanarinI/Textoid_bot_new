@@ -1,16 +1,20 @@
 FROM python:3.11-slim
 
+# Рабочая директория внутри контейнера
 WORKDIR /app
 
-# Копируем зависимости и ставим их
+# Копируем и устанавливаем зависимости
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Копируем весь код проекта
+# Копируем весь проект
 COPY . .
 
-# Для логов
+# Чтобы вывод Python шел сразу в лог
 ENV PYTHONUNBUFFERED=1
 
-# Запуск main.py
-CMD ["python", "app/main.py"]
+# EXPOSE нужен для Timeweb
+EXPOSE 8080
+
+# Команда запуска
+CMD ["python", "main.py"]
