@@ -1,27 +1,14 @@
-import asyncio
+import os
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
-from config import BOT_TOKEN
 from logging_config import setup_logging
 
+from dotenv import load_dotenv
+load_dotenv()  # Подгрузка переменных из .env
+
+# Настройка логирования
 setup_logging()
 
-bot = Bot(token=BOT_TOKEN)
+# Основные объекты бота и диспетчера
+bot = Bot(token=os.getenv("BOT_TOKEN"))
 dp = Dispatcher(storage=MemoryStorage())
-
-
-async def main():
-    setup_logging()
-
-    bot = Bot(token=BOT_TOKEN)
-    dp = Dispatcher(storage=MemoryStorage())
-
-    # Регистрируем обработчики
-    register_textoid_handlers(dp)
-
-    # Запускаем polling
-    await dp.start_polling(bot)
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
