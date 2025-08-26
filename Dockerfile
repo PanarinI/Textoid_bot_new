@@ -14,7 +14,7 @@ COPY . .
 ENV PYTHONUNBUFFERED=1
 
 # EXPOSE нужен для Timeweb
-EXPOSE 8080
+EXPOSE 9999
 
 # Команда запуска
 CMD ["python", "app/main.py"]

@@ -1,14 +1,13 @@
 import os
+from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
-from logging_config import setup_logging
 
-from dotenv import load_dotenv
-load_dotenv()  # Подгрузка переменных из .env
+load_dotenv()
 
-# Настройка логирования
-setup_logging()
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+if not BOT_TOKEN:
+    raise ValueError("BOT_TOKEN не задан!")
 
-# Основные объекты бота и диспетчера
-bot = Bot(token=os.getenv("BOT_TOKEN"))
+bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
