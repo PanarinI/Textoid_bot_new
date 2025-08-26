@@ -2,8 +2,8 @@ from aiogram import Router
 from aiogram.types import Message, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from states import TextoidStates
-from generator import generate_textoid
+from app.states import TextoidStates
+from app.generator import generate_textoid
 from aiogram import Bot
 
 router = Router()  # <-- глобальный роутер, который импортируем в main.py
@@ -123,7 +123,13 @@ async def share(call: CallbackQuery, state: FSMContext, bot: Bot):
 
     try:
         await bot.send_message(CHANNEL_ID, generated_text)
-        await call.message.answer("Текст был успешно опубликован в канале.")
+
+        channel_url = "https://t.me/tiraniia"  # ссылка на твой канал
+        await call.message.answer(
+            f'Текст был успешно опубликован <a href="{channel_url}">в канале</a>.',
+            parse_mode="HTML"
+        )
+
     except Exception as e:
         await call.message.answer(f"Ошибка при публикации: {e}")
 
