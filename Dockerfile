@@ -17,4 +17,4 @@ ENV PYTHONUNBUFFERED=1
 EXPOSE 9999
 
 # Команда запуска
-CMD ["python", "main"]
+CMD ["python", "app/main.py"]
