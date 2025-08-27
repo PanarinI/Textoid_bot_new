@@ -8,7 +8,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Копируем весь проект
-COPY . .
+COPY app/ .
 
 # Чтобы вывод Python шел сразу в лог
 ENV PYTHONUNBUFFERED=1
