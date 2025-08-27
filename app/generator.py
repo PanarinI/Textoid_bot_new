@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 from openai import OpenAI
-import app.prompt as prompt_module
+import prompt as prompt_module
 
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAIAPI"))
