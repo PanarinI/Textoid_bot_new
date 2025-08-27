@@ -2,7 +2,7 @@ from aiogram import Router
 from aiogram.types import Message, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from ..states import TextoidStates
+from app.states import TextoidStates
 from app.generator import generate_textoid
 from aiogram import Bot
 
