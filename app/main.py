@@ -45,7 +45,7 @@ async def start_webhook():
     web.run_app(app, host=WEBAPP_HOST, port=WEBAPP_PORT)
 
 
-if __name__ == "__main__":
+if __name__ == "__app__":
     if BOT_MODE == "webhook":
         asyncio.run(start_webhook())
     else:
