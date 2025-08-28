@@ -13,11 +13,11 @@ from loader import bot, dp
 from app.handlers.textoid_handlers import router as textoid_router
 from logging_config import setup_logging
 
-# Настройка логирования
+# --- Настройка логирования ---
 setup_logging()
 logging.info("🚀 Старт приложения")
 
-# Подключаем роутеры
+# --- Подключаем роутеры ---
 dp.include_router(textoid_router)
 
 # --- Переменные окружения ---
@@ -26,7 +26,6 @@ WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 WEBHOOK_PATH = os.getenv("WEBHOOK_PATH", "/textoid")
 WEBAPP_HOST = os.getenv("WEBAPP_HOST", "0.0.0.0")
 WEBAPP_PORT = int(os.getenv("WEBAPP_PORT", 80))
-
 
 # --- Функции запуска ---
 async def start_polling():
@@ -48,12 +47,17 @@ async def start_webhook():
     app.on_startup.append(on_startup)
 
     logging.info(f"Webhook сервер запущен на {WEBAPP_HOST}:{WEBAPP_PORT}")
+    # web.run_app блокирует текущий event loop, поэтому asyncio.run использовать не нужно
     web.run_app(app, host=WEBAPP_HOST, port=WEBAPP_PORT)
-
 
 # --- Точка входа ---
 if __name__ == "__main__":
     if BOT_MODE.lower() == "webhook":
-        asyncio.run(start_webhook())
+        # Если уже есть event loop (например, в Amvera), используем обычный запуск
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(start_webhook())
+        except RuntimeError:
+            asyncio.run(start_webhook())
     else:
         asyncio.run(start_polling())
