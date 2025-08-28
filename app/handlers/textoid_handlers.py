@@ -44,7 +44,7 @@ async def back_to_start(call: CallbackQuery):
 # Запрос ввода
 @router.callback_query(lambda c: c.data in ("by_title", "by_topic"))
 async def ask_input(call: CallbackQuery, state: FSMContext):
-    await call.message.edit_text("Введите тему или название:")
+    await call.message.answer("Введите тему или название:")  # <-- заменил edit_text на answer
     await state.set_state(TextoidStates.waiting_for_input)
     await state.update_data(choice=call.data)
     await call.answer()
