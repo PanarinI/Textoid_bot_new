@@ -57,7 +57,7 @@ async def got_input(message: Message, state: FSMContext):
     await state.update_data(user_input=user_input)
 
     # Сообщение о начале генерации
-    status_msg = await message.answer("Создаю текстоид… ⏳ Это время, но что такое время?")
+    status_msg = await message.answer("Создаю текстоид… ⏳ Займет 40-90 секунд")
 
     # Генерация
     result = await generate_textoid(user_input)
@@ -76,14 +76,21 @@ async def got_input(message: Message, state: FSMContext):
 
 
 # Кнопка «Повторить»
-@router.callback_query(lambda c: c.data == "repeat")
+@router.callback_query(lambda c: c.data.startswith("repeat"))
 async def repeat(call: CallbackQuery, state: FSMContext):
+    # Попытка сразу ответить на callback (игнорируем ошибку, если устарел)
+    try:
+        await call.answer()
+    except Exception:
+        pass
+
     # Получаем прошлый user_input
     data = await state.get_data()
     user_input = data.get("user_input")
 
     if not user_input:
-        await call.answer("Нет предыдущего запроса для повторения.", show_alert=True)
+        # если предыдущего запроса нет, сообщаем
+        await call.message.answer("Нет предыдущего запроса для повторения.")
         return
 
     # Сообщение о начале генерации
@@ -91,18 +98,18 @@ async def repeat(call: CallbackQuery, state: FSMContext):
 
     # Генерация
     result = await generate_textoid(user_input)
-
     await state.update_data(generated_text=result)
 
-    # Кнопки
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Повторить", callback_data="repeat")],
-        [InlineKeyboardButton(text="Сменить тему", callback_data="change")],
-        [InlineKeyboardButton(text="Поделиться в канале", callback_data="share")]
-    ])
+    # Кнопки — создаём новый callback_data, чтобы кнопка была "свежей"
+    kb = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="Повторить", callback_data="repeat_new")],
+            [InlineKeyboardButton(text="Сменить тему", callback_data="change")],
+            [InlineKeyboardButton(text="Поделиться в канале", callback_data="share")]
+        ]
+    )
 
     await status_msg.edit_text(result, reply_markup=kb)
-    await call.answer()
 
 
 
