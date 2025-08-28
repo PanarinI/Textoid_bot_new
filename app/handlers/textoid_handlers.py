@@ -71,7 +71,7 @@ async def got_input(message: Message, state: FSMContext):
         [InlineKeyboardButton(text="Поделиться в канале", callback_data="share")]
     ])
 
-    await status_msg.edit_text(result, reply_markup=kb)
+    await status_msg.edit_text(result, reply_markup=kb, parse_mode="HTML")
     await state.set_state(TextoidStates.generated)  # Новое состояние после генерации
 
 
