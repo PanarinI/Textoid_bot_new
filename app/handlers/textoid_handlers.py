@@ -2,8 +2,8 @@ from aiogram import Router
 from aiogram.types import Message, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from states import TextoidStates
-from generator import generate_textoid
+from ..states import TextoidStates
+from ..generator import generate_textoid
 from aiogram import Bot
 
 router = Router()  # <-- глобальный роутер, который импортируем в main.py
