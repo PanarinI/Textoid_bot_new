@@ -3,3 +3,4 @@ openai
 aiogram==3.17.0
 asyncio
 aiohttp==3.11.11
+certifi==2024.12.14
