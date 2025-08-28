@@ -149,7 +149,7 @@ async def share(call: CallbackQuery, state: FSMContext, bot: Bot):
         return
 
     try:
-        await bot.send_message(CHANNEL_ID, generated_text)
+        await bot.send_message(CHANNEL_ID, generated_text, parse_mode="HTML")
 
         channel_url = "https://t.me/tiraniia"  # ссылка на твой канал
         await call.message.answer(
