@@ -3,20 +3,21 @@ import sys
 import logging
 import asyncio
 from aiohttp import web
+from aiogram.types import Update
 
 # --- Добавляем корень проекта в sys.path ---
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-# --- Импорты из твоего проекта ---
+# --- Импорты ---
 from loader import bot, dp
 from app.handlers.textoid_handlers import router as textoid_router
 from logging_config import setup_logging
 
-# --- Настройка логирования ---
+# --- Логирование ---
 setup_logging()
 logging.info("🚀 Старт приложения")
 
-# --- Подключаем роутеры ---
+# --- Роутеры ---
 dp.include_router(textoid_router)
 
 # --- Переменные окружения ---
@@ -27,13 +28,12 @@ WEBAPP_HOST = os.getenv("WEBAPP_HOST", "0.0.0.0")
 WEBAPP_PORT = int(os.getenv("WEBAPP_PORT", 80))
 
 
-# --- Хендлеры для вебхука ---
+# --- Хендлеры webhook ---
 async def handle_update(request):
-    """Обработчик входящих запросов от Telegram"""
     try:
         data = await request.json()
-        from aiogram.types import Update
         update = Update(**data)
+        # ⚡️ feed_update в Amvera-среде
         await dp.feed_update(bot=bot, update=update)
         return web.Response()
     except Exception as e:
@@ -42,20 +42,19 @@ async def handle_update(request):
 
 
 async def handle_root(request):
-    """Простейший GET для проверки работы сервера"""
     return web.Response(text="✅ Бот работает!", content_type="text/plain")
 
 
 # --- Запуск polling ---
 async def start_polling():
-    logging.info("Запуск в режиме polling")
+    logging.info("Запуск polling")
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 
 
-# --- Запуск webhook через AppRunner ---
+# --- Запуск webhook ---
 async def start_webhook():
-    logging.info("Запуск в режиме webhook")
+    logging.info("Запуск webhook")
     app = web.Application()
     app.add_routes([
         web.post(WEBHOOK_PATH, handle_update),
@@ -64,6 +63,7 @@ async def start_webhook():
 
     async def on_startup(app):
         if WEBHOOK_URL:
+            await bot.delete_webhook(drop_pending_updates=True)
             await bot.set_webhook(WEBHOOK_URL)
             logging.info(f"Webhook установлен: {WEBHOOK_URL}")
 
@@ -75,15 +75,21 @@ async def start_webhook():
     await site.start()
     logging.info(f"Webhook сервер запущен на {WEBAPP_HOST}:{WEBAPP_PORT}")
 
-    # Держим процесс живым
-    await asyncio.Event().wait()
+    # ⚡️ Если Amvera уже держит loop, используем asyncio.Event().wait()
+    try:
+        await asyncio.Event().wait()
+    except asyncio.CancelledError:
+        logging.info("🛑 Webhook остановлен.")
 
 
 # --- Точка входа ---
 if __name__ == "__main__":
     try:
+        # 🔹 Для Amvera лучше напрямую использовать loop
         if BOT_MODE.lower() == "webhook":
-            asyncio.run(start_webhook())
+            loop = asyncio.get_event_loop()
+            loop.create_task(start_webhook())
+            loop.run_forever()
         else:
             asyncio.run(start_polling())
     except KeyboardInterrupt:
