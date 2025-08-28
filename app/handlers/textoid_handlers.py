@@ -109,7 +109,8 @@ async def repeat(call: CallbackQuery, state: FSMContext):
         ]
     )
 
-    await status_msg.edit_text(result, reply_markup=kb)
+    await status_msg.edit_text(result, reply_markup=kb, parse_mode="HTML")
+
 
 
 
