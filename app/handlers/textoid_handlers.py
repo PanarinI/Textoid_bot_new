@@ -170,5 +170,10 @@ async def library(call: CallbackQuery):
 
 @router.callback_query(lambda c: c.data == "about")
 async def about(call: CallbackQuery):
-    await call.message.edit_text("Текстоид-бот. Сгенерировано с помощью AI.")
+    text = (
+        "Текстоид — это текст особой формы, где содержание не представляется в традиционном линейном или сюжетном виде, "
+        "а раскрывается через взаимодействие фрагментов и их взаимное влияние.\n\n"
+        'Канал разработчика: <a href="https://t.me/bot_and_kot">t.me/bot_and_kot</a>'
+    )
+    await call.message.edit_text(text, parse_mode="HTML")
     await call.answer()
