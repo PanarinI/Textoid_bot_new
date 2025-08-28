@@ -19,9 +19,9 @@ dp.include_router(textoid_router)
 # Чтение переменных окружения
 BOT_MODE = os.getenv("BOT_MODE", "polling")
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
-WEBHOOK_PATH = os.getenv("WEBHOOK_PATH", "/webhook")
+WEBHOOK_PATH = os.getenv("WEBHOOK_PATH", "/textoid")
 WEBAPP_HOST = os.getenv("WEBAPP_HOST", "0.0.0.0")
-WEBAPP_PORT = int(os.getenv("WEBAPP_PORT", 8080))
+WEBAPP_PORT = int(os.getenv("WEBAPP_PORT", 80))
 
 
 async def start_polling():
