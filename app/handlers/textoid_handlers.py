@@ -165,8 +165,20 @@ async def share(call: CallbackQuery, state: FSMContext, bot: Bot):
 # Кнопки «Библиотека» и «О проекте»
 @router.callback_query(lambda c: c.data == "library")
 async def library(call: CallbackQuery):
-    await call.message.edit_text("Библиотека (пока пусто)")
+    text = (
+        "Библиотека (пока пусто)"
+    )
+
+    # Кнопка "В меню"
+    back_kb = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="В меню", callback_data="start")]
+        ]
+    )
+
+    await call.message.edit_text(text, parse_mode="HTML", reply_markup=back_kb)
     await call.answer()
+
 
 @router.callback_query(lambda c: c.data == "about")
 async def about(call: CallbackQuery):
@@ -175,5 +187,14 @@ async def about(call: CallbackQuery):
         "а раскрывается через взаимодействие фрагментов и их взаимное влияние.\n\n"
         'Канал разработчика: <a href="https://t.me/bot_and_kot">t.me/bot_and_kot</a>'
     )
-    await call.message.edit_text(text, parse_mode="HTML")
+
+    # Кнопка "В меню"
+    back_kb = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="В меню", callback_data="start")]
+        ]
+    )
+
+    await call.message.edit_text(text, parse_mode="HTML", reply_markup=back_kb)
     await call.answer()
+
