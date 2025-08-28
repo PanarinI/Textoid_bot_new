@@ -116,8 +116,27 @@ async def repeat(call: CallbackQuery, state: FSMContext):
 
 # Кнопка «Сменить тему»
 @router.callback_query(lambda c: c.data == "change")
-async def change(call: CallbackQuery):
-    await choose_method(call)
+async def change(call: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    generated_text = data.get("generated_text")
+
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="По названию", callback_data="by_title")],
+        [InlineKeyboardButton(text="На тему", callback_data="by_topic")],
+        [InlineKeyboardButton(text="Назад", callback_data="start")]
+    ])
+
+    if generated_text:
+        # сохраняем старый текст и добавляем меню
+        await call.message.edit_text(
+            f"{generated_text}\n\nВыберите способ:",
+            reply_markup=kb,
+            parse_mode="HTML"
+        )
+    else:
+        await call.message.edit_text("Выберите способ:", reply_markup=kb)
+
+    await call.answer()
 
 # Кнопка «Поделиться в канале»
 @router.callback_query(lambda c: c.data == "share")
