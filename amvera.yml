@@ -6,6 +6,6 @@ meta:
 build:
   requirementsPath: requirements.txt
 run:
-  scriptName: app/main.py
+  scriptName: python3 -m app.main
   persistenceMount: /data
   containerPort: 80
