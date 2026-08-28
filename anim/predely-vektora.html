@@ -1,0 +1,384 @@
+<meta charset="utf-8">
+<title>Пределы вектора</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400&family=Golos+Text:wght@400;500&display=swap">
+
+<style>
+  :root{
+    --ground:#0d0c0b; --plate:#141110; --line:#2a2724;
+    --gold:#e8c46a; --grey:#6e6a66; --fire:#e0662f;
+    --text:#d8d2c8; --dim:#807972; --faint:#57514b;
+    --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+    --ui:"Golos Text",-apple-system,"Segoe UI",sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--ground); color:var(--text); font-family:var(--ui);
+       line-height:1.6; -webkit-font-smoothing:antialiased}
+
+  .wrap{max-width:1180px; margin:0 auto; padding:4rem 1.6rem 6rem}
+
+  header{display:flex; flex-direction:column; gap:1rem; margin-bottom:3.5rem;
+         padding-bottom:2.2rem; border-bottom:1px solid var(--line)}
+  h1{margin:0; font-family:var(--mono); font-weight:300; letter-spacing:.14em;
+     font-size:clamp(1.6rem,4vw,2.4rem); color:var(--gold); text-wrap:balance}
+  .sub{margin:0; max-width:66ch; color:var(--dim); font-size:1rem}
+
+  h2{margin:0; font-family:var(--mono); font-weight:400; font-size:.78rem;
+     letter-spacing:.22em; text-transform:uppercase; color:var(--faint)}
+  .band{margin-top:3.6rem; display:flex; flex-direction:column; gap:1.6rem}
+  .band > p{margin:0; max-width:66ch; color:var(--dim); font-size:.95rem}
+
+  .grid{display:grid; gap:1.4rem;
+        grid-template-columns:repeat(auto-fill,minmax(268px,1fr))}
+
+  .plate{background:var(--plate); border:1px solid var(--line);
+         display:flex; flex-direction:column}
+  .plate svg{display:block; width:100%; height:auto; background:var(--ground)}
+  .cap{padding:.85rem 1rem 1rem; display:flex; flex-direction:column; gap:.35rem}
+  .idx{font-family:var(--mono); font-size:.66rem; letter-spacing:.16em; color:var(--faint)}
+  .nm{font-size:.94rem; font-weight:500; color:var(--text)}
+  .how{font-family:var(--mono); font-size:.72rem; line-height:1.55; color:var(--dim)}
+
+  .note{border-left:2px solid var(--fire); padding:.2rem 0 .2rem 1.1rem;
+        max-width:66ch; color:var(--dim); font-size:.95rem}
+  .note b{color:var(--text); font-weight:500}
+
+  table{border-collapse:collapse; width:100%; max-width:820px; font-size:.92rem}
+  th,td{text-align:left; padding:.6rem .9rem .6rem 0; border-bottom:1px solid var(--line);
+        vertical-align:top}
+  th{font-family:var(--mono); font-weight:400; font-size:.7rem; letter-spacing:.16em;
+     text-transform:uppercase; color:var(--faint)}
+  td:first-child{color:var(--text); white-space:nowrap; padding-right:2rem}
+  td:last-child{color:var(--dim)}
+
+  footer{margin-top:4.5rem; padding-top:1.6rem; border-top:1px solid var(--line);
+         font-family:var(--mono); font-size:.7rem; letter-spacing:.08em; color:var(--faint)}
+
+  @media (prefers-reduced-motion:reduce){ .spin{animation:none !important} }
+</style>
+
+<div class="wrap">
+<header>
+  <h1>Пределы вектора</h1>
+  <p class="sub">Ответ на вопрос, может ли вектор больше, чем простые фигуры. Каждая пластина ниже
+  нарисована кодом — ни одного готового изображения, ни одного генератора. Материал взят из
+  текстоида: круг, серый овал, линия пасти, огонь.</p>
+</header>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <filter id="r1" x="-25%" y="-25%" width="150%" height="150%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.021" numOctaves="3" seed="7" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="4" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+  <filter id="r2" x="-30%" y="-30%" width="160%" height="160%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.026" numOctaves="4" seed="19" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="12" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+  <filter id="r3" x="-40%" y="-40%" width="180%" height="180%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.034" numOctaves="5" seed="41" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="26" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+
+  <filter id="grain" x="-5%" y="-5%" width="110%" height="110%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="4" seed="11" result="noise"/>
+    <feColorMatrix in="noise" type="matrix"
+      values="0 0 0 0 0.55  0 0 0 0 0.5  0 0 0 0 0.42  0 0 0 0.55 0" result="mono"/>
+    <feComposite in="mono" in2="SourceGraphic" operator="in" result="clip"/>
+    <feBlend in="SourceGraphic" in2="clip" mode="multiply"/>
+  </filter>
+
+  <filter id="relief" x="-15%" y="-15%" width="130%" height="130%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="4" seed="5" result="bump"/>
+    <feDiffuseLighting in="bump" lighting-color="#e8c46a" surfaceScale="3.4"
+                       diffuseConstant="1.15" result="lit">
+      <feDistantLight azimuth="230" elevation="52"/>
+    </feDiffuseLighting>
+    <feComposite in="lit" in2="SourceGraphic" operator="in"/>
+  </filter>
+
+  <filter id="soften" x="-30%" y="-30%" width="160%" height="160%">
+    <feGaussianBlur stdDeviation="7"/>
+  </filter>
+
+  <radialGradient id="gold">
+    <stop offset="0" stop-color="#f2d693"/>
+    <stop offset=".62" stop-color="#e8c46a"/>
+    <stop offset="1" stop-color="#a8873c"/>
+  </radialGradient>
+  <radialGradient id="ember">
+    <stop offset="0" stop-color="#ffd9a0"/>
+    <stop offset=".35" stop-color="#e0662f"/>
+    <stop offset="1" stop-color="#3a1408"/>
+  </radialGradient>
+</defs></svg>
+
+<section class="band">
+  <h2>Ступени — от того, чем сделана первая версия, до того, что вектор действительно умеет</h2>
+
+  <div class="grid">
+
+    <div class="plate">
+      <svg viewBox="0 0 268 190">
+        <circle cx="98" cy="95" r="42" fill="#e8c46a"/>
+        <ellipse cx="196" cy="95" rx="22" ry="34" fill="#6e6a66"/>
+        <path d="M240 60 A 44 44 0 0 0 240 130" fill="none" stroke="#8a8079" stroke-width="2"/>
+      </svg>
+      <div class="cap">
+        <span class="idx">01</span>
+        <span class="nm">Примитивы</span>
+        <span class="how">circle · ellipse · дуга. Плоская заливка. Это и есть весь словарь первой версии.</span>
+      </div>
+    </div>
+
+    <div class="plate">
+      <svg viewBox="0 0 268 190">
+        <path id="freeform" fill="none" stroke="#e8c46a" stroke-width="2"/>
+        <g id="freehandles" stroke="#3a3128" stroke-width="1" fill="#5f5a53"></g>
+      </svg>
+      <div class="cap">
+        <span class="idx">02</span>
+        <span class="nm">Произвольная кривая</span>
+        <span class="how">path с кубическими Безье. Форма — это список чисел, поэтому любая. Серым показаны опорные точки.</span>
+      </div>
+    </div>
+
+    <div class="plate">
+      <svg viewBox="0 0 268 190">
+        <g fill="none" stroke="#8a8079" stroke-width="2">
+          <path d="M46 40 A 52 52 0 0 0 46 150" filter="url(#r1)"/>
+          <path d="M134 40 A 52 52 0 0 0 134 150" filter="url(#r2)"/>
+          <path d="M222 40 A 52 52 0 0 0 222 150" filter="url(#r3)"/>
+        </g>
+      </svg>
+      <div class="cap">
+        <span class="idx">03</span>
+        <span class="nm">Неровная линия</span>
+        <span class="how">feTurbulence + feDisplacementMap, scale 4 / 12 / 26. Одна и та же дуга. Дрожь, рваность, «рука» — это фильтр, а не рисование.</span>
+      </div>
+    </div>
+
+    <div class="plate">
+      <svg viewBox="0 0 268 190">
+        <circle cx="88" cy="95" r="46" fill="url(#gold)"/>
+        <circle cx="188" cy="95" r="46" fill="url(#gold)" filter="url(#grain)"/>
+      </svg>
+      <div class="cap">
+        <span class="idx">04</span>
+        <span class="nm">Зерно</span>
+        <span class="how">Слева градиент, справа он же под шумовым фильтром. Поверхность перестаёт быть заливкой и становится материалом.</span>
+      </div>
+    </div>
+
+    <div class="plate">
+      <svg viewBox="0 0 268 190">
+        <circle cx="134" cy="95" r="62" fill="#e8c46a" filter="url(#relief)"/>
+      </svg>
+      <div class="cap">
+        <span class="idx">05</span>
+        <span class="nm">Свет по рельефу</span>
+        <span class="how">feDiffuseLighting с источником света по шумовой карте высот. Объём без всякого 3D: плоский круг получает поверхность.</span>
+      </div>
+    </div>
+
+    <div class="plate">
+      <svg viewBox="0 0 268 190"><g id="moire" stroke="#6e6a66" fill="none"></g></svg>
+      <div class="cap">
+        <span class="idx">06</span>
+        <span class="nm">Вычисленная геометрия</span>
+        <span class="how">440 отрезков, посчитанных циклом. Сложность здесь — это формула, а не терпение рисовальщика.</span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<section class="band">
+  <h2>Механико-образный огонь — три подхода без единого лица</h2>
+  <p>Ты сказал: не лица, а метафора лица; тень, призрак; «может даже радикальнее».
+  Огонь — единственный, у кого в тексте нет ни одного слова формы. Значит его и не надо
+  давать формой — его можно дать <em>устройством</em>.</p>
+
+  <div class="grid">
+    <div class="plate">
+      <svg viewBox="0 0 268 190"><g id="iris"></g></svg>
+      <div class="cap">
+        <span class="idx">A</span>
+        <span class="nm">Диафрагма</span>
+        <span class="how">Девять лепестков, посчитанных как ирисовая диафрагма. «Разглядеть» — это раскрытие; «охватывает» — смыкание. Взгляд без глаза.</span>
+      </div>
+    </div>
+
+    <div class="plate">
+      <svg viewBox="0 0 268 190"><g id="teeth"></g></svg>
+      <div class="cap">
+        <span class="idx">Б</span>
+        <span class="nm">Встречные зубцы</span>
+        <span class="how">Два кольца зубьев, идущих навстречу с разной скоростью. Мерцание получается само — из расфазировки, а не из анимации яркости.</span>
+      </div>
+    </div>
+
+    <div class="plate">
+      <svg viewBox="0 0 268 190"><g id="rays"></g></svg>
+      <div class="cap">
+        <span class="idx">В</span>
+        <span class="nm">Поле штрихов</span>
+        <span class="how">240 радиальных штрихов, длина каждого — функция шума и времени. Огонь как показание прибора, а не как пламя.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band">
+  <h2>Чего вектор не может — честно</h2>
+  <table>
+    <tr><th>не тянет</th><th>почему и чем берём вместо</th></tr>
+    <tr><td>Фотореализм</td><td>Вектор описывает формы, а не пиксели. Для нашей вещи это не потеря: ей нужно бедное и точное.</td></tr>
+    <tr><td>Живописная фактура</td><td>Тысячи мазков — тысячи объектов, файл распухает, браузер встаёт. Фактуру берём фильтром, а не мазками.</td></tr>
+    <tr><td>Настоящий трёхмерный объём</td><td>Есть только имитация светом. Для «Круга» это ровно то, что нужно: он и должен остаться плоской идеальной формой.</td></tr>
+    <tr><td>Тяжёлые фильтры на всю площадь</td><td>feTurbulence по всему экрану в анимации тормозит. Поэтому движение — на canvas, а вектор — там, где нужна бесконечная резкость.</td></tr>
+  </table>
+
+  <p class="note"><b>Про ИИ-генераторы: они бы этой вещи навредили.</b> Генератор даёт красивое и
+  приблизительное. Здесь нужно обратное — точное и бедное: круг обязан <em>никогда</em> не сесть
+  на сетку, пасть обязана сломаться ровно на слове «угловатой», диафрагма обязана начать смыкаться
+  ровно на «охватывает». Всё это — числа, а не вкусовое попадание. И главное: генератор всегда
+  <em>добавляет</em>, а текстоид — операция вычитания. Он бы заполнил промежуток красотой.</p>
+</section>
+
+<footer>капсула textoid-bot · нарисовано кодом, без изображений и генераторов · 2026-08-27</footer>
+</div>
+
+<script>
+(() => {
+"use strict";
+const NS = "http://www.w3.org/2000/svg";
+const el = (n, a) => { const e = document.createElementNS(NS, n); for (const k in a) e.setAttribute(k, a[k]); return e; };
+const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* 02 — произвольная кривая: доказательство, что форма это просто числа */
+(() => {
+  const pts = [[26,132],[62,54],[112,148],[158,44],[206,120],[244,66]];
+  let d = `M${pts[0][0]} ${pts[0][1]}`;
+  for (let i = 1; i < pts.length; i++){
+    const [px, py] = pts[i-1], [x, y] = pts[i];
+    d += ` C${px + 26} ${py - 34}, ${x - 26} ${y + 34}, ${x} ${y}`;
+  }
+  document.getElementById("freeform").setAttribute("d", d);
+  const g = document.getElementById("freehandles");
+  pts.forEach(([x, y]) => g.appendChild(el("circle", {cx:x, cy:y, r:2.4})));
+})();
+
+/* 06 — муар: сложность как цикл */
+(() => {
+  const g = document.getElementById("moire");
+  const cx = 134, cy = 95, N = 220;
+  for (let i = 0; i < N; i++){
+    const a = (i / N) * Math.PI * 2;
+    const r1 = 26 + 8 * Math.sin(a * 7);
+    const r2 = 84 + 6 * Math.sin(a * 11 + 1.2);
+    g.appendChild(el("line", {
+      x1: (cx + Math.cos(a) * r1).toFixed(2), y1: (cy + Math.sin(a) * r1 * .72).toFixed(2),
+      x2: (cx + Math.cos(a * 2.02) * r2).toFixed(2), y2: (cy + Math.sin(a * 2.02) * r2 * .72).toFixed(2),
+      "stroke-width": .45, opacity: .5,
+    }));
+  }
+  for (let i = 0; i < 220; i++){
+    const a = (i / 220) * Math.PI * 2;
+    g.appendChild(el("line", {
+      x1: (cx + Math.cos(a) * 30).toFixed(2), y1: (cy + Math.sin(a) * 22).toFixed(2),
+      x2: (cx + Math.cos(a * 3.01) * 78).toFixed(2), y2: (cy + Math.sin(a * 3.01) * 58).toFixed(2),
+      "stroke-width": .35, opacity: .32, stroke: "#e8c46a",
+    }));
+  }
+})();
+
+/* A — ирисовая диафрагма: взгляд без глаза */
+const iris = (() => {
+  const g = document.getElementById("iris");
+  const cx = 134, cy = 95, R = 74, N = 9, blades = [];
+  g.appendChild(el("circle", {cx, cy, r:R + 6, fill:"none", stroke:"#2a2724", "stroke-width":1}));
+  const core = el("circle", {cx, cy, r:10, fill:"url(#ember)", opacity:.9});
+  g.appendChild(core);
+  for (let i = 0; i < N; i++){
+    const p = el("path", {fill:"#1c1512", stroke:"#e0662f", "stroke-width":.9, opacity:.92});
+    g.appendChild(p); blades.push(p);
+  }
+  function set(open){
+    const off = R * (0.16 + 0.72 * (1 - open));
+    for (let i = 0; i < N; i++){
+      const a = (i / N) * Math.PI * 2;
+      const a2 = a + (Math.PI * 2) / N;
+      const x1 = cx + Math.cos(a) * R,   y1 = cy + Math.sin(a) * R;
+      const x2 = cx + Math.cos(a2) * R,  y2 = cy + Math.sin(a2) * R;
+      const mx = cx + Math.cos(a + Math.PI / N) * (R - off);
+      const my = cy + Math.sin(a + Math.PI / N) * (R - off);
+      blades[i].setAttribute("d", `M${x1.toFixed(1)} ${y1.toFixed(1)} Q${mx.toFixed(1)} ${my.toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)} L${cx} ${cy} Z`);
+    }
+    core.setAttribute("r", (4 + open * 16).toFixed(1));
+  }
+  set(.55);
+  return set;
+})();
+
+/* Б — встречные зубцы: мерцание из расфазировки, а не из яркости */
+const teeth = (() => {
+  const g = document.getElementById("teeth");
+  const cx = 134, cy = 95;
+  const ring = (r, n, len, col, op) => {
+    const grp = el("g", {stroke:col, "stroke-width":2.2, opacity:op});
+    for (let i = 0; i < n; i++){
+      const a = (i / n) * Math.PI * 2;
+      grp.appendChild(el("line", {
+        x1:(cx + Math.cos(a) * r).toFixed(2), y1:(cy + Math.sin(a) * r).toFixed(2),
+        x2:(cx + Math.cos(a) * (r + len)).toFixed(2), y2:(cy + Math.sin(a) * (r + len)).toFixed(2),
+      }));
+    }
+    g.appendChild(grp); return grp;
+  };
+  const outer = ring(58, 34, 16, "#e0662f", .85);
+  const inner = ring(38, 26, -14, "#a8873c", .7);
+  g.appendChild(el("circle", {cx, cy, r:22, fill:"none", stroke:"#2a2724", "stroke-width":1}));
+  return (t) => {
+    outer.setAttribute("transform", `rotate(${(t * 9).toFixed(2)} ${cx} ${cy})`);
+    inner.setAttribute("transform", `rotate(${(-t * 14).toFixed(2)} ${cx} ${cy})`);
+  };
+})();
+
+/* В — поле штрихов: огонь как показание прибора */
+const rays = (() => {
+  const g = document.getElementById("rays");
+  const cx = 134, cy = 95, N = 240, lines = [];
+  for (let i = 0; i < N; i++){
+    const l = el("line", {stroke:"#e0662f", "stroke-width":1, opacity:.6});
+    g.appendChild(l); lines.push(l);
+  }
+  const nz = (x) => Math.sin(x * 1.7) * .5 + Math.sin(x * 3.9 + 1.1) * .3 + Math.sin(x * 8.3 + 2.2) * .2;
+  return (t) => {
+    for (let i = 0; i < N; i++){
+      const a = (i / N) * Math.PI * 2;
+      const r0 = 20;
+      const r1 = 30 + (nz(i * .09 + t * .9) + 1) * 26;
+      lines[i].setAttribute("x1", (cx + Math.cos(a) * r0).toFixed(2));
+      lines[i].setAttribute("y1", (cy + Math.sin(a) * r0 * .82).toFixed(2));
+      lines[i].setAttribute("x2", (cx + Math.cos(a) * r1).toFixed(2));
+      lines[i].setAttribute("y2", (cy + Math.sin(a) * r1 * .82).toFixed(2));
+    }
+  };
+})();
+
+let t = 0;
+teeth(0); rays(0);
+if (!REDUCED){
+  let last = 0;
+  requestAnimationFrame(function loop(ts){
+    requestAnimationFrame(loop);
+    if (!last) last = ts;
+    const dt = Math.min(.1, (ts - last) / 1000); last = ts;
+    t += dt;
+    iris(.5 + .45 * Math.sin(t * .55));
+    teeth(t); rays(t);
+  });
+}
+})();
+</script>

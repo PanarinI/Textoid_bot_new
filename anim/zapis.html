@@ -1,0 +1,298 @@
+<meta charset="utf-8">
+<title>Запись голоса</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400&family=PT+Serif:ital,wght@0,400;1,400&display=swap">
+
+<style>
+  :root{ --paper:#e6e4df; --ink:#191714; --half:#6f6a63; --hair:#c9c5bd; --card:#eceae5;
+         --rec:#b4553a; --ok:#4a7c52;
+         --mono:"JetBrains Mono",ui-monospace,Menlo,monospace; --serif:"PT Serif",Georgia,serif; }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--serif);
+       line-height:1.6; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px; margin:0 auto; padding:3rem 1.4rem 6rem}
+
+  header{border-bottom:1px solid var(--hair); padding-bottom:1.6rem; margin-bottom:1.4rem}
+  h1{margin:0 0 .8rem; font-family:var(--mono); font-weight:300; letter-spacing:.12em;
+     font-size:clamp(1.35rem,3.2vw,1.9rem)}
+  .rules{margin:0; padding-left:1.1rem; color:var(--half); font-size:.95rem; max-width:66ch}
+  .rules li{margin:.35rem 0}
+  .rules b{color:var(--ink); font-weight:400}
+
+  #bar{position:sticky; top:0; z-index:9; background:var(--paper); padding:.9rem 0 1rem;
+       border-bottom:1px solid var(--hair); display:flex; align-items:center; gap:1rem;
+       flex-wrap:wrap; font-family:var(--mono); font-size:.78rem; letter-spacing:.06em}
+  #bar .cnt{color:var(--half)}
+  #bar .dot{width:7px; height:7px; border-radius:50%; background:var(--hair); display:inline-block}
+  #bar .dot.on{background:var(--ok)}
+  #bar .warn{color:var(--rec)}
+
+  .part{margin:2.4rem 0 .9rem; font-family:var(--mono); font-size:.7rem; letter-spacing:.22em;
+        text-transform:uppercase; color:var(--half)}
+
+  .take{border:1px solid var(--hair); background:var(--card); margin-bottom:.9rem;
+        display:grid; grid-template-columns:1fr auto; gap:0}
+  .take.done{border-color:#b3c4b3}
+  .body{padding:1.1rem 1.2rem 1.2rem; min-width:0}
+  .meta{display:flex; align-items:center; gap:.7rem; margin-bottom:.5rem; flex-wrap:wrap}
+  .num{font-family:var(--mono); font-size:.66rem; letter-spacing:.14em; color:var(--half)}
+  .who{font-family:var(--mono); font-size:.66rem; letter-spacing:.1em; padding:.15rem .5rem;
+       border:1px solid var(--hair); color:var(--half)}
+  .line{font-size:clamp(1.1rem,2.3vw,1.45rem); margin:.15rem 0 .7rem; white-space:pre-wrap}
+  .why{font-size:.92rem; color:var(--half); margin:0 0 .45rem; max-width:62ch}
+  .how{font-family:var(--mono); font-size:.75rem; line-height:1.55; color:var(--half);
+       margin:0 0 .4rem; max-width:62ch}
+  .how b{color:var(--ink); font-weight:400}
+  .fx{font-family:var(--mono); font-size:.71rem; color:#8b8378; margin:0}
+  .heavy .line{font-style:italic}
+  .heavy{border-left:2px solid var(--ink)}
+
+  .ctl{display:flex; flex-direction:column; justify-content:center; gap:.45rem;
+       padding:1.1rem 1.1rem; border-left:1px solid var(--hair); min-width:132px}
+  button{font-family:var(--mono); font-size:.74rem; letter-spacing:.06em; cursor:pointer;
+         border:1px solid var(--hair); background:none; color:var(--ink); padding:.5rem .7rem;
+         transition:border-color .2s, color .2s}
+  button:hover:not(:disabled){border-color:var(--ink)}
+  button:disabled{opacity:.35; cursor:default}
+  button.rec{color:var(--rec); border-color:var(--rec)}
+  button.rec.active{background:var(--rec); color:var(--paper)}
+  .stat{font-family:var(--mono); font-size:.66rem; color:var(--half); text-align:center}
+  .stat.ok{color:var(--ok)}
+
+  @media (max-width:640px){ .take{grid-template-columns:1fr} .ctl{border-left:none;
+    border-top:1px solid var(--hair); flex-direction:row; flex-wrap:wrap} }
+</style>
+
+<div class="wrap">
+<header>
+  <h1>Запись голоса — «Колобок»</h1>
+  <ul class="rules">
+    <li><b>Читай ровно, без игры.</b> Выражение сделает обработка, и она построена на тех же числах, что картинка. Сыгранная интонация с ней подерётся.</li>
+    <li><b>Не подгоняй длительность.</b> Твои паузы и есть партитура: сколько ты дышишь между «— Нет.» и «— Тогда кем ты был?», столько и будет длиться тишина в вещи.</li>
+    <li><b>Разметку читать не надо</b> — «Круг сияет», «Серый исчезает» и прочее в вещи молчит и остаётся на экране. Здесь только реплики.</li>
+    <li><b>Дублей сколько хочешь.</b> Новая запись затирает предыдущую, ничего не копится.</li>
+    <li>Все реплики читаешь ты один. Дальше твой же голос гнётся четырьмя способами — так же, как один луч в картинке становится всеми пятью.</li>
+  </ul>
+</header>
+
+<div id="bar">
+  <span class="cnt" id="cnt">записано 0 из 24</span>
+  <span id="dots"></span>
+  <span class="warn" id="warn"></span>
+</div>
+
+<div id="list"></div>
+</div>
+
+<script>
+(() => {
+"use strict";
+
+const FX = {
+  "Круг":   "→ твой голос как есть. Единственное неискажённое в вещи.",
+  "Заяц":   "→ разводится так, что не накапливается: тускнеет и уходит.",
+  "Волк":   "→ квантуется: ступенчатый, не смыкающийся.",
+  "Медведь":"→ замедляется и опускается: масса.",
+  "Огонь":  "→ расстраивается сам с собой. Биение — та же величина, что рвёт накопление в картинке.",
+};
+
+/* «Серый» в тексте — это ЗАЯЦ («Уши. Овал.»), не волк. В рабочем языке зовём зайцем,
+   чтобы не путать: в русском «серый» чаще про волка. В самой вещи слово остаётся авторское. */
+const TAKES = [
+{p:"1. Исходный круг", id:"t01", who:"Круг", w:3, line:"— Я.",
+ why:"Первая речь вещи. Один слог, ни к кому не обращённый. Форма названа двумя строками раньше — «Я» ничего к ней не добавляет, это заявка без содержания. К ней вернутся последней строкой, потребовав сказуемое.",
+ how:"Ровно. Не торжественно и не тихо — просто сказать. За ней две с половиной секунды пустого поля."},
+
+{p:"2. Первая встреча", id:"t02", who:"Заяц", w:2, line:"— Я съем тебя, Круг.",
+ why:"Формула угрозы, первая из трёх. Дословно повторится ещё дважды — у Волка и у Медведя.",
+ how:"Буднично. Это не страшно, это первое из трёх одинаковых."},
+{p:"2. Первая встреча", id:"t03", who:"Круг", w:3, line:"— Ты не видишь.\nЯ больше, чем ты думаешь.",
+ why:"Единственное, что Круг говорит о себе сверх формы. За всю вещь это ни разу не проверено — ни им, ни текстом.",
+ how:"Без нажима. Он не доказывает, он утверждает."},
+
+{p:"3. Вторая встреча", id:"t04", who:"Круг", w:2, line:"— Ты не догонишь меня.",
+ why:"Единственный раз за всю вещь, когда Круг заговаривает первым.", how:""},
+{p:"3. Вторая встреча", id:"t05", who:"Волк", w:2, line:"— Но ты круглый. Идеальный.\nЯ съем тебя.",
+ why:"Вторая угроза. И единственное место, где противник называет его форму его же словом — «идеальный».", how:""},
+{p:"3. Вторая встреча", id:"t06", who:"Круг", w:2, line:"— Твои зубы остры,\nно ты цепляешь сеть.",
+ why:"Его приём: назвать дефект чужого устройства. Не сила, а наблюдение.", how:""},
+{p:"3. Вторая встреча", id:"t07", who:"Волк", w:2, line:"— Что это значит?",
+ why:"Противник спрашивает — и ему отвечают следующей же строкой. В отличие от последнего вопроса вещи.", how:""},
+{p:"3. Вторая встреча", id:"t08", who:"Круг", w:2, line:"— Это значит, ты застрянешь.",
+ why:"Единственный раз, когда Круг объясняет и предсказывает. Больше он не объяснит никогда.", how:""},
+
+{p:"4. Встреча с Медведем", id:"t09", who:"Медведь", w:3, line:"— Куда ты катишься?",
+ why:"Первый вопрос о нём самом. Не «догоню ли я тебя», а «куда».", how:""},
+{p:"4. Встреча с Медведем", id:"t10", who:"Круг", w:4, line:"— Я не знаю.",
+ why:"Первая пустота. Трещина открывается здесь, за минуту до финала, — и угроза Медведя вырастает прямо из безответности.",
+ how:"Без извинения и без вызова. Он правда не знает."},
+{p:"4. Встреча с Медведем", id:"t11", who:"Медведь", w:3, line:"— Тогда я съем тебя.",
+ why:"Первое из трёх «Тогда». Каждое приходит после ответа, который ничего не дал. Третье останется без ответа вовсе.", how:""},
+{p:"4. Встреча с Медведем", id:"t12", who:"Круг", w:2, line:"— Ты медленный.\nТы слишком много занимаешь места.",
+ why:"Тот же приём в третий раз. Он не меняется.", how:""},
+{p:"4. Встреча с Медведем", id:"t13", who:"Медведь", w:2, line:"— Но я сильный.",
+ why:"Единственное возражение противника о себе. И оно не помогает.", how:""},
+
+{p:"5. Финал", id:"t14", who:"Огонь", w:3, line:"— Круг. Ты ведь не убегаешь?",
+ why:"Четвёртый не угрожает — он спрашивает. И с этой секунды Круг начинает терять ход, хотя его ещё никто не тронул.", how:""},
+{p:"5. Финал", id:"t15", who:"Круг", w:3, line:"— Я просто катаюсь.",
+ why:"Он умаляет сам себя. Раньше было «Круг катится. Скорость.» — теперь «просто катаюсь». Через несколько строк его умалит Огонь.", how:""},
+{p:"5. Финал", id:"t16", who:"Огонь", w:4, line:"— Остановись. Ты так красив.\nЯ хочу тебя разглядеть.",
+ why:"«Хочу» во всей вещи произносит только Огонь. И это единственная просьба, которую Круг исполняет — наполовину: просили остановиться, он замедляется.",
+ how:"Без соблазна и без угрозы. Просьба."},
+{p:"5. Финал", id:"t17", who:"Круг", w:3, line:"— Ты не хочешь меня съесть?",
+ why:"Он знает только одну грамматику — съесть или не съесть. Другого отношения к себе у него нет.", how:""},
+{p:"5. Финал", id:"t18", who:"Огонь", w:3, line:"— Съесть?  …  — Нет.",
+ why:"Отменяет формулу, звучавшую трижды. Все три защиты Круга обнуляются разом: они были против аппетита, а аппетита нет.",
+ how:"«Огонь мигает» между репликами — разметка, её не читать. Пауза между «Съесть?» и «Нет» твоя, я по ней и порежу."},
+{p:"5. Финал", id:"t19", who:"Круг", w:3, line:"— Тогда зачем?",
+ why:"Второе «Тогда». Здесь слот ответа ещё заполнится.", how:""},
+{p:"5. Финал", id:"t20", who:"Огонь", w:5, line:"— Ты. Внутри.",
+ why:"Первое слово после зачина, указывающее внутрь. У Круга нет ни одной реплики о внутреннем — ни защиты, ни отрицания, ни материала. Отвечать ему нечем, и это слышно только в паузе.",
+ how:"Два назывных слова через точку, без связки. Не объяснять их интонацией — они и не объясняются."},
+{p:"5. Финал", id:"t21", who:"Круг", w:4, line:"— Я всё ещё Круг?",
+ why:"Первый вопрос о себе. В начале он сказал «— Я.» — утверждение. Сорок строк спустя то же самое, но вопросом.", how:""},
+{p:"5. Финал", id:"t22", who:"Огонь", w:5, line:"— Ты был всего лишь формой.",
+ why:"Единственное прошедшее время во всей вещи, и произносится оно, пока Круг ещё говорит. Два удара сразу: «был» — ты кончился, «всего лишь» — и ты никогда не был многим. Ровно на этой строке кольцо на экране размыкается.",
+ how:"Без злорадства. Огонь ни разу не солгал за всю вещь."},
+{p:"5. Финал", id:"t23", who:"Круг", w:4, line:"— Нет.",
+ why:"Последнее слово Круга. Один слог, повтор слова, которое только что сказал Огонь, и первый его отказ без всякого довода. Именно оно вызывает последний удар: возражение приняли всерьёз.",
+ how:"Не громко. Он не спорит — он отказывается."},
+{p:"5. Финал", id:"t24", who:"Огонь", w:5, line:"— Тогда кем ты был?",
+ why:"Третье «Тогда», и слот ответа впервые пуст. Единственный вопрос вещи, за которым нет ни одной реплики. Спрашивают «кем», а не «чем», — впервые его называют живым, ровно тогда, когда его уже нет.",
+ how:"Не грозно. Это настоящий вопрос — Огонь правда спрашивает. После него пять секунд пустого поля."},
+];
+
+const list = document.getElementById("list");
+const cntEl = document.getElementById("cnt");
+const dotsEl = document.getElementById("dots");
+const warnEl = document.getElementById("warn");
+
+let stream = null, rec = null, activeId = null, chunks = [];
+const have = new Set();
+const blobs = new Map();
+
+function ext(type){
+  if (/webm/.test(type)) return "webm";
+  if (/ogg/.test(type)) return "ogg";
+  if (/mp4|m4a|aac/.test(type)) return "m4a";
+  return "bin";
+}
+function refresh(){
+  cntEl.textContent = `записано ${have.size} из ${TAKES.length}`;
+  dotsEl.innerHTML = TAKES.map(t =>
+    `<span class="dot${have.has(t.id) ? " on" : ""}"></span>`).join(" ");
+}
+
+fetch("/golos/list").then(r => r.json()).then(f => {
+  Object.keys(f).forEach(n => { const id = n.split(".")[0]; if (f[n] > 0) have.add(id); });
+  TAKES.forEach(t => {
+    if (have.has(t.id)) {
+      const row = document.getElementById("row-" + t.id);
+      if (row){ row.classList.add("done"); row.querySelector(".stat").textContent = "записано"; row.querySelector(".stat").classList.add("ok"); }
+    }
+  });
+  refresh();
+}).catch(()=>{});
+
+let lastPart = "";
+TAKES.forEach(t => {
+  if (t.p !== lastPart){
+    lastPart = t.p;
+    const h = document.createElement("div");
+    h.className = "part"; h.textContent = t.p;
+    list.appendChild(h);
+  }
+  const el = document.createElement("div");
+  el.className = "take" + (t.w >= 4 ? " heavy" : "");
+  el.id = "row-" + t.id;
+  el.innerHTML = `
+    <div class="body">
+      <div class="meta"><span class="num">${t.id.slice(1)}</span><span class="who">${t.who}</span></div>
+      <div class="line">${t.line}</div>
+      <p class="why">${t.why}</p>
+      ${t.how ? `<p class="how"><b>Как читать:</b> ${t.how}</p>` : ""}
+      <p class="fx">${FX[t.who]}</p>
+    </div>
+    <div class="ctl">
+      <button class="rec" data-rec="${t.id}">● запись</button>
+      <button data-play="${t.id}" disabled>▶ слушать</button>
+      <span class="stat">—</span>
+    </div>`;
+  list.appendChild(el);
+});
+refresh();
+
+async function ensureMic(){
+  if (stream) return stream;
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({audio:{
+      echoCancellation:false, noiseSuppression:false, autoGainControl:false}});
+    warnEl.textContent = "";
+    return stream;
+  }catch(e){
+    warnEl.textContent = "микрофон не дали: " + e.name;
+    return null;
+  }
+}
+
+async function start(id, btn){
+  const s = await ensureMic(); if (!s) return;
+  chunks = []; activeId = id;
+  let mime = "";
+  for (const m of ["audio/webm;codecs=opus","audio/webm","audio/mp4"])
+    if (window.MediaRecorder && MediaRecorder.isTypeSupported(m)) { mime = m; break; }
+  rec = new MediaRecorder(s, mime ? {mimeType:mime} : undefined);
+  rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+  rec.onstop = async () => {
+    const blob = new Blob(chunks, {type: rec.mimeType || "audio/webm"});
+    blobs.set(id, blob);
+    const name = `${id}.${ext(blob.type)}`;
+    const row = document.getElementById("row-" + id);
+    const stat = row.querySelector(".stat");
+    stat.textContent = "отправляю…"; stat.classList.remove("ok");
+    try{
+      const r = await fetch("/golos/" + name, {method:"POST", body: blob});
+      const j = await r.json();
+      if (j.ok){
+        have.add(id); row.classList.add("done");
+        stat.textContent = `записано · ${(j.bytes/1024).toFixed(0)} КБ`;
+        stat.classList.add("ok");
+        row.querySelector("[data-play]").disabled = false;
+        refresh();
+      } else stat.textContent = "не принято";
+    }catch(e){ stat.textContent = "сервер молчит"; }
+  };
+  rec.start();
+  btn.textContent = "■ стоп"; btn.classList.add("active");
+}
+
+list.addEventListener("click", async e => {
+  const rb = e.target.closest("[data-rec]");
+  if (rb){
+    const id = rb.dataset.rec;
+    if (rec && rec.state === "recording" && activeId === id){
+      rec.stop(); rb.textContent = "● переписать"; rb.classList.remove("active"); return;
+    }
+    if (rec && rec.state === "recording") rec.stop();
+    document.querySelectorAll("[data-rec]").forEach(b => {
+      b.classList.remove("active");
+      if (b !== rb) b.textContent = have.has(b.dataset.rec) ? "● переписать" : "● запись";
+    });
+    await start(id, rb);
+    return;
+  }
+  const pb = e.target.closest("[data-play]");
+  if (pb){
+    const id = pb.dataset.play;
+    const b = blobs.get(id);
+    const url = b ? URL.createObjectURL(b) : null;
+    const a = new Audio(url || "");
+    a.play().catch(()=>{});
+  }
+});
+
+addEventListener("keydown", e => { if (e.key === "Escape" && rec && rec.state === "recording") rec.stop(); });
+})();
+</script>

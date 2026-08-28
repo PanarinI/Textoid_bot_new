@@ -2,13 +2,56 @@ from aiogram import Router
 from aiogram.types import Message, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
+from aiogram.exceptions import TelegramBadRequest
 from app.states import TextoidStates
-from app.generator import generate_textoid
+from app.generator import generate_textoid, GenerationError
 from aiogram import Bot
 
 router = Router()  # <-- глобальный роутер, который импортируем в main.py
 
 CHANNEL_ID = "@tiraniia" # для импорта в канал
+
+TG_LIMIT = 4000  # запас к телеграмному пределу в 4096 символов
+
+
+def split_text(text: str, limit: int = TG_LIMIT) -> list[str]:
+    """Режем длинный текстоид по границам абзацев — иначе Telegram его не примет."""
+    parts = []
+    rest = text
+    while len(rest) > limit:
+        cut = rest.rfind("\n\n", 0, limit)
+        if cut <= 0:
+            cut = rest.rfind("\n", 0, limit)
+        if cut <= 0:
+            cut = limit
+        parts.append(rest[:cut].strip())
+        rest = rest[cut:].strip()
+    if rest:
+        parts.append(rest)
+    return parts
+
+
+async def edit_safely(msg: Message, text: str, kb: InlineKeyboardMarkup | None = None):
+    """Если модель прислала кривой HTML — показываем как обычный текст, а не падаем."""
+    try:
+        return await msg.edit_text(text, reply_markup=kb, parse_mode="HTML")
+    except TelegramBadRequest:
+        return await msg.edit_text(text, reply_markup=kb, parse_mode=None)
+
+
+async def answer_safely(msg: Message, text: str, kb: InlineKeyboardMarkup | None = None):
+    try:
+        return await msg.answer(text, reply_markup=kb, parse_mode="HTML")
+    except TelegramBadRequest:
+        return await msg.answer(text, reply_markup=kb, parse_mode=None)
+
+
+async def deliver(status_msg: Message, text: str, kb: InlineKeyboardMarkup):
+    """Первый кусок встаёт вместо «Создаю…», остальные идут следом. Кнопки — под последним."""
+    parts = split_text(text)
+    await edit_safely(status_msg, parts[0], kb if len(parts) == 1 else None)
+    for i, part in enumerate(parts[1:], start=1):
+        await answer_safely(status_msg, part, kb if i == len(parts) - 1 else None)
 
 # Главное меню
 menu_kb = InlineKeyboardMarkup(
@@ -60,7 +103,12 @@ async def got_input(message: Message, state: FSMContext):
     status_msg = await message.answer("Создаю текстоид… ⏳ Займет 40-90 секунд")
 
     # Генерация
-    result = await generate_textoid(user_input)
+    try:
+        result = await generate_textoid(user_input)
+    except GenerationError as e:
+        # состояние не меняем — можно сразу ввести тему заново
+        await status_msg.edit_text(str(e))
+        return
 
     await state.update_data(generated_text=result) # сохраняем текст в state для кнопки "Поделиться в канале
 
@@ -71,7 +119,7 @@ async def got_input(message: Message, state: FSMContext):
         [InlineKeyboardButton(text="Поделиться в канале", callback_data="share")]
     ])
 
-    await status_msg.edit_text(result, reply_markup=kb, parse_mode="HTML")
+    await deliver(status_msg, result, kb)
     await state.set_state(TextoidStates.generated)  # Новое состояние после генерации
 
 
@@ -97,7 +145,12 @@ async def repeat(call: CallbackQuery, state: FSMContext):
     status_msg = await call.message.answer("Создаю новый текстоид… ⏳")
 
     # Генерация
-    result = await generate_textoid(user_input)
+    try:
+        result = await generate_textoid(user_input)
+    except GenerationError as e:
+        await status_msg.edit_text(str(e))
+        return
+
     await state.update_data(generated_text=result)
 
     # Кнопки — создаём новый callback_data, чтобы кнопка была "свежей"
@@ -109,9 +162,7 @@ async def repeat(call: CallbackQuery, state: FSMContext):
         ]
     )
 
-    await status_msg.edit_text(result, reply_markup=kb, parse_mode="HTML")
-
-
+    await deliver(status_msg, result, kb)
 
 
 # Кнопка «Сменить тему»
@@ -126,15 +177,13 @@ async def change(call: CallbackQuery, state: FSMContext):
         [InlineKeyboardButton(text="Назад", callback_data="start")]
     ])
 
-    if generated_text:
+    combined = f"{generated_text}\n\nВыберите способ:" if generated_text else ""
+    if combined and len(combined) <= TG_LIMIT:
         # сохраняем старый текст и добавляем меню
-        await call.message.edit_text(
-            f"{generated_text}\n\nВыберите способ:",
-            reply_markup=kb,
-            parse_mode="HTML"
-        )
+        await edit_safely(call.message, combined, kb)
     else:
-        await call.message.edit_text("Выберите способ:", reply_markup=kb)
+        # текстоид слишком длинный, чтобы дописать к нему меню — оставляем его как есть
+        await call.message.answer("Выберите способ:", reply_markup=kb)
 
     await call.answer()
 
@@ -149,7 +198,11 @@ async def share(call: CallbackQuery, state: FSMContext, bot: Bot):
         return
 
     try:
-        await bot.send_message(CHANNEL_ID, generated_text, parse_mode="HTML")
+        for part in split_text(generated_text):
+            try:
+                await bot.send_message(CHANNEL_ID, part, parse_mode="HTML")
+            except TelegramBadRequest:
+                await bot.send_message(CHANNEL_ID, part, parse_mode=None)
 
         channel_url = "https://t.me/tiraniia"  # ссылка на твой канал
         await call.message.answer(

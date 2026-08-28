@@ -1,0 +1,177 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 780" font-family="-apple-system,'Segoe UI',sans-serif">
+  <rect width="1000" height="780" fill="#1a1614"/>
+
+  <text x="30" y="42" fill="#e8e2da" font-size="21" font-weight="700">The Textoid</text>
+  <text x="30" y="65" fill="#8a827a" font-size="12.5">A subtraction, not a retelling. The effect is not in what is kept — it is in the gap the reader has to close.</text>
+
+  <!-- ── column headers ── -->
+  <text x="105" y="106" fill="#8a827a" font-size="11.5" font-weight="700" text-anchor="middle" letter-spacing="1">SOURCE</text>
+  <text x="300" y="106" fill="#e2a24a" font-size="11.5" font-weight="700" text-anchor="middle" letter-spacing="1">SUBTRACTION</text>
+  <text x="560" y="106" fill="#8a827a" font-size="11.5" font-weight="700" text-anchor="middle" letter-spacing="1">WHAT REMAINS</text>
+  <text x="870" y="106" fill="#7cb87c" font-size="11.5" font-weight="700" text-anchor="middle" letter-spacing="1">READER</text>
+
+  <!-- ── 1. SOURCE: dense prose ── -->
+  <rect x="30" y="120" width="150" height="300" rx="6" fill="#221c17" stroke="#3a3128"/>
+  <g fill="#5c554d">
+    <rect x="42" y="134" width="122" height="2"/><rect x="42" y="146" width="108" height="2"/>
+    <rect x="42" y="158" width="126" height="2"/><rect x="42" y="170" width="96" height="2"/>
+    <rect x="42" y="182" width="120" height="2"/><rect x="42" y="194" width="114" height="2"/>
+    <rect x="42" y="206" width="126" height="2"/><rect x="42" y="218" width="88" height="2"/>
+    <rect x="42" y="230" width="122" height="2"/><rect x="42" y="242" width="118" height="2"/>
+    <rect x="42" y="254" width="104" height="2"/><rect x="42" y="266" width="126" height="2"/>
+    <rect x="42" y="278" width="112" height="2"/><rect x="42" y="290" width="124" height="2"/>
+    <rect x="42" y="302" width="92" height="2"/><rect x="42" y="314" width="120" height="2"/>
+    <rect x="42" y="326" width="126" height="2"/><rect x="42" y="338" width="106" height="2"/>
+    <rect x="42" y="350" width="118" height="2"/><rect x="42" y="362" width="124" height="2"/>
+    <rect x="42" y="374" width="98" height="2"/><rect x="42" y="386" width="126" height="2"/>
+    <rect x="42" y="398" width="110" height="2"/><rect x="42" y="410" width="80" height="2"/>
+  </g>
+  <text x="105" y="440" fill="#8a827a" font-size="11" text-anchor="middle">the tale, fully told</text>
+
+  <!-- ── 2. SIEVE ── -->
+  <!-- everything flows at the sieve -->
+  <g stroke="#5c554d" stroke-width="1.2">
+    <path d="M180 146 L232 150" fill="none"/><path d="M180 170 L232 158" fill="none"/>
+    <path d="M180 194 L232 210" fill="none"/><path d="M180 218 L232 220" fill="none"/>
+    <path d="M180 242 L232 232" fill="none"/><path d="M180 266 L232 278" fill="none"/>
+    <path d="M180 290 L232 286" fill="none"/><path d="M180 314 L232 300" fill="none"/>
+    <path d="M180 338 L232 342" fill="none"/><path d="M180 362 L232 352" fill="none"/>
+    <path d="M180 386 L232 400" fill="none"/><path d="M180 410 L232 408" fill="none"/>
+  </g>
+  <rect x="232" y="120" width="26" height="300" rx="4" fill="#2a231c" stroke="#e2a24a" stroke-width="1.5"/>
+  <g fill="#1a1614">
+    <rect x="232" y="145" width="26" height="15"/><rect x="232" y="210" width="26" height="15"/>
+    <rect x="232" y="275" width="26" height="15"/><rect x="232" y="340" width="26" height="15"/>
+    <rect x="232" y="405" width="26" height="15"/>
+  </g>
+
+  <!-- what falls away -->
+  <g stroke="#6b5f52" stroke-width="1.6" opacity="0.9">
+    <path d="M234 176 C 226 240, 224 320, 232 420" fill="none"/>
+    <path d="M234 196 C 244 260, 250 340, 262 420" fill="none"/>
+    <path d="M234 252 C 252 300, 268 360, 292 420" fill="none"/>
+    <path d="M234 316 C 258 350, 288 385, 322 420" fill="none"/>
+    <path d="M234 378 C 262 392, 300 406, 350 420" fill="none"/>
+  </g>
+  <g fill="#6b5f52" opacity="0.9">
+    <rect x="226" y="422" width="136" height="3" rx="1.5"/>
+    <rect x="238" y="429" width="112" height="3" rx="1.5"/>
+    <rect x="250" y="436" width="88" height="3" rx="1.5"/>
+  </g>
+  <g fill="#5c554d" font-size="11" text-anchor="middle">
+    <text x="294" y="462">explanation · motivation</text>
+    <text x="294" y="478">description · psychology</text>
+    <text x="294" y="494">connective tissue</text>
+  </g>
+  <text x="294" y="516" fill="#8a827a" font-size="11" font-style="italic" text-anchor="middle">everything that tells you what to feel</text>
+
+  <!-- what passes -->
+  <g stroke="#e2a24a" stroke-width="2">
+    <path d="M258 152 L440 152" fill="none"/><path d="M258 217 L440 217" fill="none"/>
+    <path d="M258 282 L440 282" fill="none"/><path d="M258 347 L440 347" fill="none"/>
+    <path d="M258 412 L440 412" fill="none"/>
+  </g>
+  <g fill="#e2a24a" font-size="10.5" font-weight="700" letter-spacing="0.5">
+    <text x="286" y="145">POSITION</text><text x="286" y="210">COLLISION</text>
+    <text x="286" y="275">POSITION</text><text x="286" y="340">COLLISION</text>
+    <text x="286" y="405">TRANSITION</text>
+  </g>
+
+  <!-- ── 3. WHAT REMAINS: the marks, with the gaps drawn as objects ── -->
+  <g fill="#e8e2da" font-size="14.5">
+    <text x="450" y="157">Серый. Уши. Овал.</text>
+    <text x="450" y="222">— Я съем тебя, Круг.</text>
+    <text x="450" y="287">— Я больше, чем ты думаешь.</text>
+    <text x="450" y="352">Круг сияет. Серый тускнеет.</text>
+    <text x="450" y="417">Серый исчезает.</text>
+  </g>
+
+  <!-- the gaps -->
+  <g>
+    <rect x="450" y="168" width="256" height="40" rx="5" fill="none" stroke="#7cb87c" stroke-width="1" stroke-dasharray="3 4" opacity="0.6"/>
+    <rect x="450" y="233" width="256" height="40" rx="5" fill="none" stroke="#7cb87c" stroke-width="1" stroke-dasharray="3 4" opacity="0.6"/>
+    <rect x="450" y="298" width="256" height="40" rx="5" fill="none" stroke="#7cb87c" stroke-width="1" stroke-dasharray="3 4" opacity="0.6"/>
+    <rect x="450" y="363" width="256" height="40" rx="5" fill="none" stroke="#7cb87c" stroke-width="1" stroke-dasharray="3 4" opacity="0.6"/>
+  </g>
+  <!-- reader's own material forming inside the gaps -->
+  <g fill="#7cb87c">
+    <ellipse cx="530" cy="188" rx="46" ry="11" opacity="0.16"/><ellipse cx="530" cy="188" rx="24" ry="7" opacity="0.20"/>
+    <ellipse cx="600" cy="253" rx="52" ry="11" opacity="0.18"/><ellipse cx="600" cy="253" rx="27" ry="7" opacity="0.22"/>
+    <ellipse cx="560" cy="318" rx="44" ry="11" opacity="0.16"/><ellipse cx="560" cy="318" rx="23" ry="7" opacity="0.20"/>
+    <ellipse cx="590" cy="383" rx="50" ry="11" opacity="0.18"/><ellipse cx="590" cy="383" rx="26" ry="7" opacity="0.22"/>
+  </g>
+
+  <!-- ── 4. READER fills the gaps ── -->
+  <g stroke="#7cb87c" stroke-width="1.6" fill="none">
+    <path d="M830 188 L714 188"/><path d="M830 253 L714 253"/>
+    <path d="M830 318 L714 318"/><path d="M830 383 L714 383"/>
+  </g>
+  <g fill="#7cb87c">
+    <path d="M706 188 L720 183 L720 193 Z"/><path d="M706 253 L720 248 L720 258 Z"/>
+    <path d="M706 318 L720 313 L720 323 Z"/><path d="M706 383 L720 378 L720 388 Z"/>
+  </g>
+  <rect x="836" y="140" width="134" height="290" rx="8" fill="#221c17" stroke="#3a3128"/>
+  <g fill="#8a827a" font-size="11.5">
+    <text x="852" y="172">He is given no</text>
+    <text x="852" y="190">feeling to accept</text>
+    <text x="852" y="208">or reject —</text>
+    <text x="852" y="234" fill="#cfc8bf">so there is</text>
+    <text x="852" y="252" fill="#cfc8bf">nothing to</text>
+    <text x="852" y="270" fill="#cfc8bf">defend against.</text>
+    <text x="852" y="300">The gap is empty,</text>
+    <text x="852" y="318">so he fills it</text>
+    <text x="852" y="336">from himself.</text>
+    <text x="852" y="366" fill="#7cb87c" font-weight="700">What he assembles</text>
+    <text x="852" y="384" fill="#7cb87c" font-weight="700">is already his.</text>
+    <text x="852" y="410">That is the effect.</text>
+  </g>
+  <text x="578" y="440" fill="#8a827a" font-size="11" text-anchor="middle">meaning sits in the dashed space — not in the lines above and below it</text>
+
+  <!-- ── divider ── -->
+  <line x1="30" y1="536" x2="970" y2="536" stroke="#3a3128"/>
+  <text x="30" y="562" fill="#d97b6c" font-size="13.5" font-weight="700">THE SAME LAW, FAILING — three ways the author watched it die</text>
+  <text x="30" y="581" fill="#8a827a" font-size="11.5">close the gap · abstract the marks · break the resonance. Each time, one of the three columns above is gone.</text>
+
+  <!-- fail 1: summary -->
+  <rect x="30" y="596" width="300" height="164" rx="8" fill="#221c17" stroke="#3a3128"/>
+  <text x="46" y="620" fill="#d97b6c" font-size="12" font-weight="700">GAP CLOSED → summary</text>
+  <g fill="#8a827a">
+    <rect x="46" y="634" width="180" height="3"/><rect x="46" y="641" width="196" height="3"/>
+    <rect x="46" y="648" width="172" height="3"/><rect x="46" y="655" width="190" height="3"/>
+    <rect x="46" y="662" width="164" height="3"/><rect x="46" y="669" width="184" height="3"/>
+  </g>
+  <text x="252" y="656" fill="#d97b6c" font-size="20" font-weight="700">✕</text>
+  <text x="46" y="700" fill="#8a827a" font-size="11">Marks kept, spacing lost. Nothing left</text>
+  <text x="46" y="716" fill="#8a827a" font-size="11">for the reader to do.</text>
+  <text x="46" y="742" fill="#cfc8bf" font-size="11" font-style="italic">«просто минималистичный конспект —</text>
+  <text x="46" y="756" fill="#cfc8bf" font-size="11" font-style="italic">ничего не возникает»</text>
+
+  <!-- fail 2: abstraction -->
+  <rect x="350" y="596" width="300" height="164" rx="8" fill="#221c17" stroke="#3a3128"/>
+  <text x="366" y="620" fill="#d97b6c" font-size="12" font-weight="700">MARKS ABSTRACTED → pseudo-philosophy</text>
+  <g fill="#5c554d">
+    <ellipse cx="400" cy="644" rx="30" ry="10" opacity="0.5"/><ellipse cx="400" cy="644" rx="18" ry="6" opacity="0.4"/>
+    <ellipse cx="478" cy="662" rx="34" ry="11" opacity="0.5"/><ellipse cx="478" cy="662" rx="20" ry="6" opacity="0.4"/>
+    <ellipse cx="566" cy="644" rx="28" ry="10" opacity="0.5"/><ellipse cx="566" cy="644" rx="16" ry="6" opacity="0.4"/>
+  </g>
+  <text x="366" y="700" fill="#8a827a" font-size="11">A thing became a notion. Nothing solid</text>
+  <text x="366" y="716" fill="#8a827a" font-size="11">to stand on, so nothing resonates.</text>
+  <text x="366" y="742" fill="#cfc8bf" font-size="11" font-style="italic">«можно ли быть кругом, если нет пути» —</text>
+  <text x="366" y="756" fill="#cfc8bf" font-size="11" font-style="italic">«какая-то псевдофилософия»</text>
+
+  <!-- fail 3: noise -->
+  <rect x="670" y="596" width="300" height="164" rx="8" fill="#221c17" stroke="#3a3128"/>
+  <text x="686" y="620" fill="#d97b6c" font-size="12" font-weight="700">RESONANCE BROKEN → noise</text>
+  <g fill="#8a827a">
+    <rect x="700" y="636" width="54" height="3"/><rect x="826" y="644" width="38" height="3"/>
+    <rect x="742" y="654" width="46" height="3"/><rect x="898" y="636" width="30" height="3"/>
+    <rect x="686" y="666" width="42" height="3"/><rect x="806" y="672" width="58" height="3"/>
+    <rect x="880" y="660" width="34" height="3"/><rect x="762" y="676" width="26" height="3"/>
+  </g>
+  <text x="686" y="700" fill="#8a827a" font-size="11">Fragments no longer answer each other.</text>
+  <text x="686" y="716" fill="#8a827a" font-size="11">Spacing without a thread is not a gap.</text>
+  <text x="686" y="742" fill="#cfc8bf" font-size="11" font-style="italic">«я читаю это как бред шизофреника —</text>
+  <text x="686" y="756" fill="#cfc8bf" font-size="11" font-style="italic">я не вижу нити»</text>
+
+  <text x="970" y="775" fill="#5c554d" font-size="10" text-anchor="end">textoid-bot capsule · read out of the founding dialogue, 18–25 Jan 2025 · drawn 2026-08-26</text>
+</svg>

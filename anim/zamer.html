@@ -1,0 +1,92 @@
+<meta charset="utf-8">
+<title>Замер записи</title>
+<style>
+  body{background:#141310;color:#d8d2c8;font:13px/1.5 ui-monospace,Menlo,monospace;margin:0;padding:1.2rem}
+  pre{white-space:pre-wrap;margin:0}
+  .bad{color:#e0662f}
+</style>
+<pre id="out">меряю…</pre>
+<script>
+(async () => {
+"use strict";
+const out = document.getElementById("out");
+const AC = new (window.AudioContext || window.webkitAudioContext)();
+const IDS = Array.from({length:24}, (_,i) => "t" + String(i+1).padStart(2,"0"));
+
+/* окно 20 мс; порог берём от собственного шумового пола записи */
+function analyse(buf){
+  const sr = buf.sampleRate;
+  const n = buf.length;
+  const ch = buf.numberOfChannels;
+  const d = buf.getChannelData(0);
+  const W = Math.round(sr * 0.02);
+  const env = [];
+  for (let i = 0; i + W <= n; i += W){
+    let s = 0;
+    for (let k = 0; k < W; k++){ const v = d[i+k]; s += v*v; }
+    env.push(Math.sqrt(s / W));
+  }
+  const sorted = [...env].sort((a,b)=>a-b);
+  const floor = sorted[Math.floor(sorted.length * 0.15)] || 1e-6;
+  const peak = sorted[sorted.length - 1];
+  const thr = Math.max(floor * 3.5, peak * 0.06);
+
+  let first = -1, last = -1;
+  for (let i = 0; i < env.length; i++) if (env[i] > thr){ if (first < 0) first = i; last = i; }
+
+  /* внутренние паузы длиннее 220 мс */
+  const gaps = [];
+  if (first >= 0){
+    let runStart = -1;
+    for (let i = first; i <= last; i++){
+      if (env[i] <= thr){ if (runStart < 0) runStart = i; }
+      else { if (runStart >= 0 && (i - runStart) * 0.02 >= 0.22)
+               gaps.push([+(runStart*0.02).toFixed(2), +((i-runStart)*0.02).toFixed(2)]);
+             runStart = -1; }
+    }
+  }
+  let clip = 0;
+  for (let i = 0; i < n; i += 7) if (Math.abs(d[i]) > 0.985) clip++;
+
+  return {
+    dur: +buf.duration.toFixed(3),
+    sr, ch,
+    start: first < 0 ? null : +(first*0.02).toFixed(2),
+    end:   last  < 0 ? null : +((last+1)*0.02).toFixed(2),
+    speech: first < 0 ? 0 : +(((last+1-first)*0.02)).toFixed(2),
+    peak: +peak.toFixed(4),
+    floor: +floor.toFixed(5),
+    snr: +(20*Math.log10(peak/Math.max(floor,1e-9))).toFixed(1),
+    gaps,
+    clipped: clip,
+  };
+}
+
+const rows = [];
+let total = 0, bad = [];
+for (const id of IDS){
+  try{
+    const r = await fetch(`/golos/${id}.webm`);
+    const ab = await r.arrayBuffer();
+    const buf = await AC.decodeAudioData(ab);
+    const a = analyse(buf);
+    a.id = id; rows.push(a);
+    total += a.speech;
+    if (a.speech < 0.25) bad.push(`${id}: почти тишина`);
+    if (a.snr < 12) bad.push(`${id}: шумно (SNR ${a.snr} дБ)`);
+    if (a.clipped > 40) bad.push(`${id}: перегруз (${a.clipped} отсечек)`);
+    out.textContent = `измерено ${rows.length}/24…`;
+  }catch(e){ rows.push({id, error: String(e).slice(0,80)}); }
+}
+
+const hdr = "id    длит   речь   старт  конец  пик    SNR   паузы внутри";
+const body = rows.map(r => r.error ? `${r.id}  ОШИБКА ${r.error}` :
+  `${r.id}  ${String(r.dur).padEnd(6)} ${String(r.speech).padEnd(6)} ${String(r.start).padEnd(6)} ${String(r.end).padEnd(6)} ${String(r.peak).padEnd(6)} ${String(r.snr).padEnd(5)} ${r.gaps.map(g=>`${g[0]}с+${g[1]}`).join(" ")}`
+).join("\n");
+
+out.innerHTML = `<b>ЗАМЕР ЗАПИСИ · частота ${rows[0]&&rows[0].sr} Гц</b>\n\n${hdr}\n${body}\n\n` +
+  `речи всего: ${total.toFixed(1)} с\n` +
+  (bad.length ? `<span class="bad">ВНИМАНИЕ:\n  ${bad.join("\n  ")}</span>` : "проблем не найдено");
+window.__z = rows;
+})();
+</script>

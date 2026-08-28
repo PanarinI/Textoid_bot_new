@@ -38,17 +38,33 @@ async def handle_root(request):
     return web.Response(text="✅ Бот работает!", content_type="text/plain")
 
 # --- Хендлер для Webhook ---
-async def handle_update(request):
+# Генерация текстоида занимает больше минуты, а Telegram ждёт ответа ~60 секунд
+# и повторяет апдейт, если не дождался. Поэтому отвечаем сразу, а обработку
+# уводим в фоновую задачу — иначе одна тема генерируется (и оплачивается) дважды.
+background_tasks = set()
+
+
+async def process_update(update: Update):
     start_time = time.time()
     try:
-        data = await request.json()
-        update = Update(**data)
         await dp.feed_update(bot=bot, update=update)
-        logging.info(f"⏳ Обработка запроса заняла {time.time() - start_time:.4f} сек")
-        return web.Response()
+        logging.info(f"⏳ Обработка апдейта заняла {time.time() - start_time:.1f} сек")
     except Exception as e:
-        logging.error(f"❌ Ошибка обработки Webhook: {e}", exc_info=True)
-        return web.Response(status=500)
+        logging.error(f"❌ Ошибка обработки апдейта: {e}", exc_info=True)
+
+
+async def handle_update(request):
+    try:
+        data = await request.json()
+        update = Update.model_validate(data, context={"bot": bot})
+    except Exception as e:
+        logging.error(f"❌ Некорректный Webhook-запрос: {e}", exc_info=True)
+        return web.Response(status=400)
+
+    task = asyncio.create_task(process_update(update))
+    background_tasks.add(task)
+    task.add_done_callback(background_tasks.discard)
+    return web.Response()
 
 # --- Startup: установка webhook ---
 async def on_startup():

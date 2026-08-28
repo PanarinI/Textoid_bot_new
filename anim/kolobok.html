@@ -1,0 +1,901 @@
+<meta charset="utf-8">
+<title>Текстоид Колобка</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;1,300&family=PT+Serif:ital,wght@0,400;1,400&display=swap">
+
+<style>
+  /* Один тон на всю вещь. Текст называет три цвета — картинка ведёт встречный счёт. */
+  :root{
+    --paper:#e6e4df; --ink:#191714; --half:#6f6a63; --hair:#c9c5bd;
+    --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+    --serif:"PT Serif",Georgia,serif;
+  }
+  :root[data-tone="dark"]{ --paper:#141310; --ink:#e4e0d7; --half:#7b756c; --hair:#33302b; }
+
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--paper); color:var(--ink); overflow:hidden;
+       font-family:var(--serif); -webkit-font-smoothing:antialiased}
+
+  canvas{position:fixed; inset:0; display:block; width:100%; height:100%}
+  #trace{z-index:1}
+  /* у сказанного своё время: этот слой гаснет вдесятеро медленнее следа движения */
+  #words{z-index:2; pointer-events:none}
+  #grain{position:fixed; inset:0; z-index:3; pointer-events:none; opacity:.5;
+         mix-blend-mode:multiply; background-repeat:repeat}
+  :root[data-tone="dark"] #grain{mix-blend-mode:screen; opacity:.28}
+
+  #card{position:fixed; inset:0; z-index:6; background:var(--paper);
+        display:flex; flex-direction:column; align-items:center; justify-content:center;
+        gap:2.2rem; transition:opacity 1.1s ease}
+  #card.gone{opacity:0; pointer-events:none}
+  #card .kicker{font-family:var(--mono); font-size:.72rem; letter-spacing:.3em;
+                text-transform:uppercase; color:var(--half)}
+  #card h1{margin:0; font-family:var(--serif); font-weight:400;
+           font-size:clamp(2.4rem,8vw,5rem); letter-spacing:.02em}
+  #begin{font-family:var(--mono); font-size:.82rem; letter-spacing:.18em;
+         background:none; color:var(--ink); border:1px solid var(--hair);
+         padding:.9rem 2.6rem; cursor:pointer; transition:border-color .3s}
+  #begin:hover,#begin:focus-visible{border-color:var(--ink)}
+  #begin:focus-visible{outline:2px solid var(--ink); outline-offset:3px}
+
+  #part{position:fixed; top:2.1rem; left:2.3rem; z-index:4;
+        font-family:var(--mono); font-style:italic; font-size:.76rem;
+        letter-spacing:.1em; color:var(--half); opacity:0; transition:opacity .8s}
+  #part.on{opacity:1}
+
+  #panel{position:fixed; left:0; right:0; bottom:0; z-index:5; display:flex;
+         align-items:center; justify-content:center; gap:1.5rem; flex-wrap:wrap;
+         padding:.9rem 1.2rem; font-family:var(--mono); font-size:.72rem;
+         letter-spacing:.06em; color:var(--half); opacity:.14; transition:opacity .4s}
+  #panel:hover,#panel:focus-within,#panel.wake{opacity:.95}
+  #panel .g{display:flex; align-items:center; gap:.5rem}
+  #panel .l{font-size:.62rem; letter-spacing:.2em; text-transform:uppercase; color:var(--hair)}
+  #panel button{font:inherit; color:var(--half); background:none; border:none;
+                cursor:pointer; padding:.25rem .4rem}
+  #panel button:hover,#panel button.act{color:var(--ink)}
+  #panel button:focus-visible{outline:1px solid var(--half); outline-offset:2px}
+  #panel .s{width:1px; height:13px; background:var(--hair)}
+</style>
+
+<canvas id="trace"></canvas>
+<canvas id="words"></canvas>
+<div id="grain"></div>
+<div id="part"></div>
+
+<div id="card">
+  <span class="kicker">текстоид</span>
+  <h1>Колобок</h1>
+  <button id="begin" type="button">начать</button>
+</div>
+
+<div id="panel">
+  <div class="g"><button id="play" type="button">пауза</button><button id="again" type="button">заново</button></div>
+  <div class="s"></div>
+  <div class="g"><span class="l">часть</span>
+    <button type="button" data-part="0">1</button><button type="button" data-part="1">2</button>
+    <button type="button" data-part="2">3</button><button type="button" data-part="3">4</button>
+    <button type="button" data-part="4">5</button></div>
+  <div class="s"></div>
+  <div class="g"><span class="l">темп</span>
+    <button type="button" data-rate="0.8">медленно</button>
+    <button type="button" data-rate="1" class="act">ровно</button>
+    <button type="button" data-rate="1.3">быстро</button></div>
+  <div class="s"></div>
+  <div class="g"><button id="tone" type="button">на светлом</button>
+    <button id="snd" type="button" class="act">звук вкл</button></div>
+</div>
+
+<script>
+(() => {
+"use strict";
+const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* ─────────── ПАРТИТУРА ───────────
+   mark — разметка машины (быстро, мелко, моноширинно, без голоса)
+   say  — реплика (медленно, крупно, серифом, озвучивается)
+   Событие ставится ТАКТОМ РАНЬШЕ строки, которая его называет, или не ставится вовсе.
+   gap — размеченная тишина; веса из разбора, а не поровну.                        */
+
+const S1 = [
+  {t:"Дед: крошки.",        k:"mark", h:1200, g:280, a:"crumbs"},
+  {t:"Баба: вода.",         k:"mark", h:1200, g:280, a:"water"},
+  {t:"Муки: не хватает.",   k:"mark", h:1400, g:900,  a:"lack", ga:["cut1",260]},
+  {t:"Круг.",               k:"mark", h:1200, g:420, a:"seek"},
+  {t:"Идеальная форма.",    k:"mark", h:1500, g:900,  a:null},
+  {t:"Круг просыпается.",   k:"mark", h:1500, g:700,  a:"wake"},
+  {t:"— Я.",                k:"say",  h:880, g:2600, v:"t01", a:null},
+  {t:"Круг катится.",       k:"mark", h:1200, g:260, a:null},
+  {t:"Скорость.",           k:"mark", h:1100, g:520, a:"fast"},
+  {t:"Мир становится линиями,\nдорожными сетками, углами.", k:"mark", h:2500, g:600, a:null},
+  {t:"Но Круг — не часть этой сетки.", k:"mark", h:2200, g:700, a:null},
+  {t:"Круг всегда сам по себе.", k:"mark", h:2000, g:2100, a:"cruise"},
+];
+/* ─────────── ТРИ ВСТРЕЧИ: ОДИН ТАКТ, ПОВТОРЁННЫЙ ТРИЖДЫ ───────────
+   Встречи не рассказывают три истории — они повторяют одну фигуру, чтобы четвёртая
+   встреча имела что сломать. Такт всегда один и тот же и всегда из четырёх шагов:
+   называние (разметка) · угроза существа · ответ Круга · исчезновение (разметка).
+   Тишины на одинаковых местах: 300 после называния, 340 между репликами, 1500 между
+   встречами. Одно отступление за все три — в третьей: Круг впервые не знает ответа.
+   Всё, что делало встречи разными (замах Медведя, торг Волка), вынуто: разность
+   деталей съедала одинаковость, а одинаковость здесь и есть приём.                  */
+
+const S2 = [
+  {t:"Серый цвет. Уши. Овал.", k:"mark", h:1500, g:300, a:null},
+  {t:"— Я съем тебя, Круг.",   k:"say",  h:2440, g:340, v:"t02", a:"greyNear"},
+  {t:"— Ты не видишь.\nЯ больше, чем ты думаешь.", k:"say", h:5280, g:340, v:"t03", a:null},
+  {t:"Серый исчезает.",        k:"mark", h:1300, g:1500, a:"greyOut"},
+];
+const S3 = [
+  {t:"Глаза. Линия пасти. Волк.", k:"mark", h:1500, g:300, a:null},
+  {t:"— Но ты круглый. Идеальный.\nЯ съем тебя.", k:"say", h:4140, g:340, v:"t05", a:"wolfNear"},
+  /* приём Круга назван и через долю секунды сбывается: пасть цепляет собственную решётку */
+  {t:"— Твои зубы остры,\nно ты цепляешь сеть.", k:"say", h:3920, g:340, v:"t06",
+   a:"quantize", ga:["wolfStuck",900]},
+  {t:"Волк исчезает.",            k:"mark", h:1300, g:1500, a:"wolfOut"},
+];
+const S4 = [
+  {t:"Масса. Коричневая масса.\nОгромная форма.", k:"mark", h:1500, g:300, a:"bear"},
+  /* единственная трещина в фигуре: до угрозы Круга спрашивают о нём самом, и он не знает.
+     Победа после этого всё равно приходит — по инерции приёма, а не потому, что он прав. */
+  {t:"— Куда ты катишься?",       k:"say",  h:1720, g:340, v:"t09", a:null},
+  {t:"— Я не знаю.",              k:"say",  h:3440, g:900, v:"t10", a:null},
+  {t:"— Тогда я съем тебя.",      k:"say",  h:1640, g:340, v:"t11", a:"bearGrow"},
+  {t:"— Ты медленный.\nТы слишком много занимаешь места.", k:"say", h:3840, g:340, v:"t12", a:null},
+  /* пустота перед Огнём: первая остановка за всю вещь, пять секунд ни звука ни движения */
+  {t:"Тень рассыпается.",         k:"mark", h:1300, g:5000, a:"bearFail"},
+];
+const S5 = [
+  {t:"Огонь. Оранжевый цвет. Глаза.", k:"mark", h:2100, g:900, a:"seen"},
+  {t:"— Круг. Ты ведь не убегаешь?", k:"say", h:2280, g:800, v:"t14", a:"noticed"},
+  /* единственная склейка за всю вещь — в тишине, до просьбы «разглядеть» */
+  {t:"— Я просто катаюсь.",       k:"say",  h:1640, g:900, v:"t15", a:"yield1", ga:["frame",380]},
+  {t:"— Остановись. Ты так красив.\nЯ хочу тебя разглядеть.", k:"say", h:5860, g:600, v:"t16", a:"yield2"},
+  {t:"Круг замедляется.",         k:"mark", h:1700, g:2400, a:null, ga:["cut2",300]},
+  {t:"— Ты не хочешь меня съесть?", k:"say", h:1920, g:700, v:"t17", a:null},
+  {t:"— Съесть? — Огонь мигает. — Нет.", k:"say", h:2500, g:1000, v:"t18", a:"blink", ga:["beat",240]},
+  {t:"— Тогда зачем?",            k:"say",  h:1400, g:1000, v:"t19", a:null, ga:["echo",400]},
+  {t:"— Ты. Внутри.",             k:"say",  h:2600, g:2600, v:"t20", a:null, ga:["cut3",520]},
+  {t:"Огонь охватывает Круг.\nЕго форма начинает мерцать.", k:"mark", h:2600, g:700, a:"engulf"},
+  {t:"— Я всё ещё Круг?",         k:"say",  h:2280, g:1300, v:"t21", a:null},
+  {t:"— Ты был всего лишь формой.", k:"say", h:2560, g:900, v:"t22", a:"open"},
+  /* смерть механизма — в тишине, ЗА ТАКТ до единственного вопроса без ответа */
+  {t:"— Нет.",                    k:"say",  h:800, g:1100, v:"t23", a:null, ga:["stop",300]},
+  {t:"— Тогда кем ты был?",       k:"say",  h:2200, g:5000, v:"t24", a:null, ga:["cut4",2100]},
+  {t:"Круг исчезает.",            k:"mark", h:2000, g:4500, a:null, ga:["wipe",3600]},
+];
+const STAGE = [
+  {part:"1. Исходный круг",     beats:S1},
+  {part:"2. Первая встреча",    beats:S2},
+  {part:"3. Вторая встреча",    beats:S3},
+  {part:"4. Встреча с Медведем",beats:S4},
+  {part:"5. Финал",             beats:S5},
+];
+
+/* ─────────── ПОЛЕ ───────────
+   Кадр не очищается. След копится, поле каждый кадр осветляется на постоянную долю.
+   Плотность есть только там, где след успел лечь дважды раньше, чем погас первый раз. */
+
+const cv = document.getElementById("trace"), cx = cv.getContext("2d", {alpha:false});
+const wv = document.getElementById("words"), wx = wv.getContext("2d");
+const gv = document.getElementById("grain");
+let W=0, H=0, DPR=1, CXp=0, CYp=0, UNIT=0;
+
+function paper(){ return getComputedStyle(document.documentElement).getPropertyValue("--paper").trim(); }
+function paperRGB(){ return document.documentElement.dataset.tone === "dark" ? "20,19,16" : "230,228,223"; }
+function inkRGB(){ return document.documentElement.dataset.tone === "dark" ? "228,224,215" : "25,23,20"; }
+
+function size(){
+  DPR = Math.min(2, devicePixelRatio || 1);
+  W = innerWidth; H = innerHeight;
+  cv.width = wv.width = Math.floor(W*DPR);
+  cv.height = wv.height = Math.floor(H*DPR);
+  cx.setTransform(DPR,0,0,DPR,0,0); wx.setTransform(DPR,0,0,DPR,0,0);
+  CXp = W*0.5; CYp = H*0.60; UNIT = Math.min(W,H);
+  cx.fillStyle = paper(); cx.fillRect(0,0,W,H);
+  wx.clearRect(0,0,W,H);
+  drawGrain();
+}
+/* мозаика 256×256, повторяемая фоном: зерно одинаково по всему листу,
+   а видеопамяти и смешения стоит в сотни раз меньше полноэкранного холста */
+let grainURL = "";
+function drawGrain(){
+  if (!grainURL){
+    const g = document.createElement("canvas"); g.width = g.height = 256;
+    const c = g.getContext("2d");
+    const img = c.createImageData(256,256), d = img.data;
+    for (let i=0;i<d.length;i+=4){
+      const v = 128 + (Math.random()*2-1)*26;
+      d[i]=d[i+1]=d[i+2]=v; d[i+3]=30;
+    }
+    c.putImageData(img,0,0);
+    grainURL = g.toDataURL("image/png");
+  }
+  gv.style.backgroundImage = `url(${grainURL})`;
+  gv.style.backgroundSize = `${Math.round(256/DPR)}px ${Math.round(256/DPR)}px`;
+}
+size(); addEventListener("resize", size);
+
+/* мягкий шум суммой синусов — детерминированный, дешёвый */
+let DECAY = 0.48;     /* доля осветления поля в секунду: период полураспада ~1.44 с */
+const WDECAY = 0.030; /* сказанное держится дольше движения: полураспад ~23 с */
+
+/* ─────────── КОМПОЗИЦИЯ ЛИСТА ───────────
+   Текст здесь не подпись под картинкой, а сама вещь: лист — страница диалога.
+   Курсор один на всех и идёт сверху вниз, поэтому порядок чтения равен порядку
+   времени и две реплики не могут лечь друг на друга. Слева — те, кто обращается
+   к Кругу, справа — он, между колонками катится он сам. Разметка в диалоге не
+   участвует: она наверху, мелкая, машинная.
+   Вид говорящего задан замыслом, а не автоматом: Заяц бледен (он тускнеет),
+   Волк курсивом (он острый), Медведь крупен (масса), Огонь разрежен по буквам
+   (он не в точке, он охватывает), Круг набран ровно — он единственный неискажённый. */
+
+const VOICE = {
+  krug:  {side:"right", size:0.026, track:0,    ital:0, dim:1.00},
+  zayac: {side:"left",  size:0.024, track:0,    ital:0, dim:0.62},
+  volk:  {side:"left",  size:0.028, track:0,    ital:1, dim:0.90},
+  medv:  {side:"left",  size:0.034, track:0,    ital:0, dim:1.00},
+  ogon:  {side:"left",  size:0.025, track:0.22, ital:0, dim:0.88},
+};
+const column = (side) => side === "left" ? [W*0.035, W*0.300] : [W*0.700, W*0.965];
+let words = [], cursorY = 0, markN = 0, seeding = false, finAt = null, wiped = false;
+
+function setFont(ctx, wd){
+  ctx.font = wd.mono ? `300 ${wd.size}px "JetBrains Mono", monospace`
+                     : `${wd.ital ? "italic " : ""}400 ${wd.size}px "PT Serif", Georgia, serif`;
+  try{ ctx.letterSpacing = wd.track ? `${wd.track}em` : "0em"; }catch(e){}
+}
+
+/* Лист кончился — он сменяется целиком, а не записывается поверх: наложение
+   второй страницы на первую читается грязью, а не памятью. Переворот — событие. */
+function turnPage(){
+  wx.setTransform(DPR,0,0,DPR,0,0);
+  wx.clearRect(0,0,W,H);
+  words = [];
+  cursorY = H*0.10;
+}
+
+/* реплика раскладывается целиком в момент, когда её начали говорить:
+   слова уже знают свои места и только проявляются по очереди, как письмо */
+function layout(b){
+  if (b.k === "mark"){
+    /* разметка — ремарка: по центру, мелкая, машинная, но в ОБЩЕМ потоке.
+       Курсор один на всю вещь, поэтому лист читается как страница пьесы:
+       ремарки посередине, реплики по сторонам, всё строго сверху вниз. */
+    const size = UNIT*0.0155, lh = size*1.9, wide = W*0.34;
+    setFont(wx, {size, mono:1, track:0.10});
+    const rows = [];
+    let row = "";
+    for (const w of b.t.replace(/\n/g," ").split(/\s+/).filter(Boolean)){
+      const probe = row ? row + " " + w : w;
+      if (row && wx.measureText(probe).width > wide){ rows.push(row); row = w; }
+      else row = probe;
+    }
+    if (row) rows.push(row);
+    if (cursorY + rows.length*lh > H*0.90) turnPage();
+    rows.forEach((r,i) => words.push({txt:r, size, mono:1, track:0.10, faint:1,
+                 align:"center", x:W*0.5, y:cursorY + i*lh, born:0, quota:26}));
+    cursorY += rows.length*lh + lh*0.55;
+    return;
+  }
+
+  const v = VOICE[SPK[b.v]] || VOICE.krug;
+  const [x0,x1] = column(v.side);
+  const size = UNIT*v.size, lh = size*1.5, span = b.h*0.78;
+  let parts = b.t.replace(/\n/g," ").split(/\s+/).filter(Boolean);
+  if (parts[0] === "—" && parts.length > 1) parts = [parts[0]+" "+parts[1], ...parts.slice(2)];
+
+  setFont(wx, {size, track:v.track, ital:v.ital});
+  const spaceW = wx.measureText(" ").width;
+  /* страница кончилась — пишем сверху поверх выцветшего: лист-палимпсест */
+  if (cursorY > H*0.86) turnPage();
+  let x = x0, y = cursorY;
+  parts.forEach((p,i) => {
+    const wpx = wx.measureText(p).width;
+    if (x > x0 && x + wpx > x1){ x = x0; y += lh; }
+    words.push({txt:p, x, y, size, track:v.track, ital:v.ital, dim:v.dim,
+                align:"left", born: span*i/parts.length, quota:26});
+    x += wpx + spaceW;
+  });
+  cursorY = y + lh*1.45;
+}
+
+function drawWords(dt){
+  /* слой сказанного гаснет вычитанием непрозрачности, а не заливкой бумагой:
+     иначе он затянул бы след белёсой плёнкой */
+  wx.globalCompositeOperation = "destination-out";
+  wx.fillStyle = `rgba(0,0,0,${(1 - Math.exp(-dt*WDECAY)).toFixed(5)})`;
+  wx.fillRect(0,0,W,H);
+  wx.globalCompositeOperation = "source-over";
+  if (seeding) return;              /* набор поля перед прыжком слова не прожигает */
+  for (const wd of words){
+    if (wd.quota <= 0 || clock < wd.born) continue;
+    wd.quota--;
+    const a = wd.faint ? 0.026 : 0.050*(wd.dim || 1);
+    setFont(wx, wd);
+    wx.textAlign = wd.align || "left"; wx.textBaseline = "alphabetic";
+    /* ореол бумаги под буквой: Медведь заливает поле и заходит под колонку,
+       без ореола слово тонет в его следе. Слово важнее следа — оно и сверху. */
+    wx.lineWidth = wd.size*0.20;
+    wx.lineJoin = "round";
+    wx.strokeStyle = `rgba(${paperRGB()},${(wd.quota >= 25 ? 0.92 : a*2.6).toFixed(4)})`;
+    wx.strokeText(wd.txt, wd.x, wd.y);
+    wx.fillStyle = `rgba(${inkRGB()},${a.toFixed(4)})`;
+    wx.fillText(wd.txt, wd.x, wd.y);
+  }
+  if (words.length > 300) words = words.slice(-220);
+}
+const nz = (x) => Math.sin(x)*0.5 + Math.sin(x*2.31+1.7)*0.3 + Math.sin(x*5.13+3.1)*0.2;
+
+const S = {
+  T:0,
+  cr:{th:0, w:0, tw:0, amp:0.19, tamp:0.19, ink:0, tink:0, wob:1.9, twob:1.9, bend:1, tbend:1},
+  gr:{th:0, on:0, ton:0, near:0.62, tnear:0.62},
+  wf:{th:0, on:0, ton:0, q:0, tq:0, stuck:0, tstuck:0},
+  br:{on:0, ton:0, amp:0.5, tamp:0.5, th:0},
+  fr:{on:0, ton:0, ph:0, blink:0},
+  echo:0, techo:0,
+  cam:{u:1, dx:0, dy:0},   /* один разрыв за вещь; интерполяции здесь нет */
+  D:0,                     /* плотность поля — ею живёт звук */
+};
+/* Раз текст — сама вещь, поле не спорит с ним за середину: оно мельче и ниже,
+   и написанное окружает Круг, а не подписывает его. */
+const FIELD = 0.62;
+const AMP = () => S.cam.u * UNIT * FIELD;
+const CX  = () => CXp + S.cam.dx * UNIT;
+const CY  = () => CYp + S.cam.dy * UNIT;
+const ease=(c,t,k,dt)=>c+(t-c)*(1-Math.exp(-k*dt));
+
+const ACT = {
+  crumbs(){ S.cr.tink = .30; S.cr.tw = 1.1; S.cr.tamp = .07; S.cr.twob = 9;  S.cr.tbend = .18; },
+  water(){  S.cr.tink = .34; S.cr.tw = 1.3; S.cr.tamp = .10; S.cr.twob = 6.5;},
+  lack(){   S.cr.tink = .26; S.cr.tw = 0.9; },
+  seek(){   S.cr.tink = .42; S.cr.tw = 1.9; S.cr.tamp = .155; S.cr.twob = 3.2; S.cr.tbend = .55; },
+  wake(){   S.cr.tink = .60; S.cr.tw = 2.6; S.cr.tamp = .175; S.cr.twob = 1.9; S.cr.tbend = 1; },
+  fast(){   S.cr.tw = 3.4; S.cr.tink = .72; },
+  cruise(){ S.cr.tw = 3.0; },
+
+  greyNear(){ S.gr.ton = 1; S.gr.tnear = .40; },
+  greyOut(){  S.gr.ton = 0; S.cr.tink = .86; },
+
+  wolfNear(){ S.wf.ton = 1; },
+  quantize(){ S.wf.tq = 1; },
+  wolfStuck(){ S.wf.tstuck = 1; },
+  wolfOut(){  S.cr.tw = 4.1; S.wf.ton = 0; },
+
+  bear(){     S.br.ton = 1; S.br.tamp = .42; },
+  bearGrow(){ S.br.tamp = .58; },
+  bearSwing(){ S.br.tamp = .68; },
+  bearFail(){ S.br.ton = 0; },
+
+  /* Огонь до «охватывает» не делает НИЧЕГО. Круг тормозит сам, за одно то,
+     что его увидели: замедление — уступка, а не захват. Лестница начинается
+     на появлении Огня, ДО его первого слова. */
+  seen(){    S.cr.tw = 2.80; },
+  noticed(){ S.cr.tw = 2.55; },
+  yield1(){  S.cr.tw = 2.30; },
+  yield2(){  S.cr.tw = 1.75; },
+  blink(){   S.fr.blink = 1; },
+  echo(){    S.techo = 1; },
+  /* ОТКАЗ: на строке, которая называет захват, скорость не меняется ни на сколько.
+     Всё замедление израсходовано раньше и добровольно — захватывать уже нечего. */
+  engulf(){  },
+  open(){    S.cr.tw = 1.10; S.cr.twob = 3.4; },
+
+  /* ── ходы, срабатывающие в размеченной ТИШИНЕ (ga), а не на строке ── */
+
+  /* единственная склейка. Накопленный буфер не трогаем: прежний круг остаётся
+     лежать где лежал и умирает по своему закону; новый копится в стороне. */
+  frame(){ S.cam = {u:0.72, dx:-0.10, dy:0.10}; prevC=prevG=prevW=prevB=null; },
+
+  /* смерть механизма: перо гаснет разом, поле перестаёт забывать */
+  stop(){ S.cr.ink = S.cr.tink = 0; S.cr.w = S.cr.tw = 0; S.echo = S.techo = 0;
+          prevC=prevG=prevW=prevB=null; DECAY = 0; },
+
+  /* стирается лист, а не Круг */
+  wipe(){ DECAY = 5.0; finAt = S.T; },
+
+  /* четыре среза рассказчика — единственное, что автор делает за всю вещь */
+  cut1(){ audioCut(0.6); },
+  cut2(){ audioCut(0.8); },
+  cut3(){ audioCut(1.0); },
+  cut4(){ audioCut(1.4); },
+  beat(){ S.fr.ton = 1; },
+};
+
+function step(dt){
+  S.T += dt;
+  const c = S.cr;
+  c.w    = ease(c.w,    c.tw,    1.15, dt);
+  c.ink  = ease(c.ink,  c.tink,  1.8,  dt);
+  c.amp  = ease(c.amp,  c.tamp,  1.5,  dt);
+  c.wob  = ease(c.wob,  c.twob,  1.2,  dt);
+  c.bend = ease(c.bend, c.tbend, 1.4,  dt);
+  S.gr.on   = ease(S.gr.on,   S.gr.ton,   1.5, dt);
+  S.gr.near = ease(S.gr.near, S.gr.tnear, 1.1, dt);
+  S.wf.on   = ease(S.wf.on,   S.wf.ton,   1.5, dt);
+  S.wf.q    = ease(S.wf.q,    S.wf.tq,    1.3, dt);
+  S.wf.stuck= ease(S.wf.stuck,S.wf.tstuck,1.2, dt);
+  S.br.on   = ease(S.br.on,   S.br.ton,   1.2, dt);
+  S.br.amp  = ease(S.br.amp,  S.br.tamp,  0.9, dt);
+  S.fr.on   = ease(S.fr.on,   S.fr.ton,   1.0, dt);
+  S.echo    = ease(S.echo,    S.techo,    0.9, dt);
+  S.fr.blink = Math.max(0, S.fr.blink - dt*1.5);
+  /* плотность идёт по тому же уравнению, что поле: прибывает от чернил, убывает затуханием */
+  S.D += (2.4*S.cr.ink*Math.min(1, S.cr.w/3) - DECAY*S.D) * dt;
+  if (S.D < 0) S.D = 0;
+  S.fr.ph += dt * Math.max(0, S.cr.w) * 1.06;
+}
+
+/* точка Круга: почти круглая, но дышит — «идеальная форма» это его заявка, не факт */
+function crPoint(th){
+  const c = S.cr;
+  const r = c.amp * AMP() * (1 + c.bend*(0.075*nz(th*3.0) + 0.042*nz(th*7.7+2.1) + 0.03*nz(th*1.31 + S.T*0.055)));
+  return [CX() + Math.cos(th)*r, CY() + Math.sin(th)*r*0.985];
+}
+function grPoint(th){
+  const a = 0.175*AMP(), b = 0.115*AMP(), prec = S.T*0.22;
+  const x = Math.cos(th)*a, y = Math.sin(th)*b;
+  return [CX() + S.gr.near*AMP()*0.55 + x*Math.cos(prec) - y*Math.sin(prec),
+          CY() + x*Math.sin(prec) + y*Math.cos(prec)];
+}
+function wfPoint(th){
+  const span = Math.PI*(0.92 - 0.55*S.wf.stuck);
+  const a = Math.PI - span/2 + span*((th % 1) + 1) % 1;
+  const R = 0.20*AMP();
+  let x = CX() + 0.26*AMP() + Math.cos(a)*R, y = CY() + Math.sin(a)*R;
+  const p = 3 + 16*S.wf.q;
+  if (S.wf.q > 0.01){
+    x = x + (Math.round(x/p)*p - x)*S.wf.q;
+    y = y + (Math.round(y/p)*p - y)*S.wf.q;
+  }
+  return [x,y];
+}
+function brPoint(th){
+  const r = S.br.amp*AMP()*(0.62 + 0.16*nz(th*2.2));
+  return [CX() + 0.34*AMP() + Math.cos(th)*r, CY() + Math.sin(th)*r*0.9];
+}
+
+let prevC=null, prevG=null, prevW=null, prevB=null, echoTick=-1;
+
+function seg(p0, p1, alpha, width){
+  if (!p0 || alpha < 0.004) return;
+  cx.strokeStyle = `rgba(${inkRGB()},${alpha.toFixed(4)})`;
+  cx.lineWidth = width;
+  cx.beginPath(); cx.moveTo(p0[0], p0[1]); cx.lineTo(p1[0], p1[1]); cx.stroke();
+}
+
+function paint(dt){
+  /* Затухание — один экспоненциальный шаг на кадр, а не заливка на каждый подшаг:
+     иначе при провале кадров получаются сотни полноэкранных заливок. */
+  cx.globalCompositeOperation = "source-over";
+  cx.fillStyle = paper();
+  /* затухание асимптотично, а канва восьмибитная: остаточная тень в семь уровней
+     держится вечно. Через две с половиной секунды после стирания — начисто. */
+  if (finAt !== null && S.T - finAt > 2.5 && !wiped){ wiped = true; cx.globalAlpha = 1; cx.fillRect(0,0,W,H); }
+  else {
+    cx.globalAlpha = DECAY <= 0 ? 0 : 1 - Math.exp(-dt * DECAY);
+    if (DECAY > 0) cx.fillRect(0,0,W,H);
+  }
+  cx.globalAlpha = 1;
+  cx.globalCompositeOperation = document.documentElement.dataset.tone === "dark" ? "lighter" : "multiply";
+  cx.lineCap = "round";
+
+  /* подшагов ровно столько, чтобы след был непрерывен на этом dt */
+  const SUB = Math.min(96, Math.max(8, Math.ceil(dt * 700)));
+  const c = S.cr;
+
+  for (let i=1;i<=SUB;i++){
+    const f = i/SUB;
+
+    /* Круг */
+    if (c.ink > 0.004){
+      const th = S.cr.th + c.w*dt*f;
+      const p = crPoint(th);
+      let a = c.ink * (0.55 + 0.45*(0.5+0.5*nz(th*4.4+1.3)));
+      if (S.fr.on > 0.01){
+        /* «охватывает»: чужой сигнал в яркость следа. Частота близка к скорости Круга — биение. */
+        const beat = 0.5 + 0.5*Math.sin(S.fr.ph + th);
+        a *= (1 - S.fr.on*0.85) + S.fr.on*0.85*beat;
+        a *= (1 - S.fr.blink*0.9);
+      }
+      const wd = 1.05 + 0.85*(0.5+0.5*nz(th*2.6+4.2));
+      seg(prevC, p, a*0.78, wd); prevC = p;
+    } else prevC = null;
+
+    /* Серый (это ЗАЯЦ: «Уши. Овал.» — не волк, хотя в русском «серый» чаще про волка).
+       То же семейство кривых, но отношение частот не даёт вернуться в ту же точку. */
+    if (S.gr.on > 0.004){
+      const th = S.gr.th + c.w*1.003*dt*f;
+      const p = grPoint(th);
+      seg(prevG, p, S.gr.on*0.30, 1.5); prevG = p;
+    } else prevG = null;
+
+    /* Волк — те же координаты, но квантованные к решётке. Пасть не смыкается вычислительно. */
+    if (S.wf.on > 0.004){
+      const th = S.wf.th + dt*f*2.6;
+      const local = ((th % 1)+1)%1;
+      const stall = 0.10 + 0.90*Math.abs(Math.sin(local*Math.PI));  /* две точки, где луч стоит */
+      const p = wfPoint(th);
+      seg(prevW, p, S.wf.on*0.34*(1.3 - stall), 1.8 + 2.4*(1-stall)); prevW = p;
+    } else prevW = null;
+
+    /* Медведь — тот же луч, скорость вниз, амплитуда вверх: заливает поле */
+    if (S.br.on > 0.004){
+      const th = S.br.th + 1.15*dt*f;
+      const p = brPoint(th);
+      seg(prevB, p, S.br.on*0.34, 7.5); prevB = p;
+    } else prevB = null;
+  }
+
+  S.cr.th += c.w*dt;
+  S.gr.th += c.w*1.003*dt;
+  S.wf.th += dt*2.6;
+  S.br.th += 1.15*dt;
+
+  /* эхо зачина: те же крошки, но уже внутри поля Круга */
+  if (S.echo > 0.01 && Math.floor(S.T*4) !== echoTick){
+    echoTick = Math.floor(S.T*4);
+    cx.fillStyle = `rgba(${inkRGB()},${(S.echo*0.34).toFixed(4)})`;
+    for (let i=0;i<3;i++){
+      const th = S.T*0.5 + i*2.1;
+      const r = S.cr.amp*AMP()*0.42*(0.5+0.5*nz(th));
+      cx.fillRect(CX() + Math.cos(th)*r - 1, CY() + Math.sin(th)*r - 1, 2, 2);
+    }
+  }
+  cx.globalCompositeOperation = "source-over";
+  drawWords(dt);
+}
+
+/* ─────────── ЗВУК ───────────
+   Не подложка и не музыка. Прибор: он не сочинён, он снят с поля.
+   Высота = частота оборота Круга. Громкость = плотность следа, которая живёт
+   по тому же уравнению, что бумага. Память = задержка длиной в оборот с
+   возвратом exp(−DECAY·период) — буквально та же константа, которой светлеет лист.
+   Когда обороты быстрые, возвраты складываются в тело; когда Круг тормозит,
+   звук распадается на редкие эхо сам, ровно тогда же, когда размыкается кольцо.
+
+   Рассказчик — не голос и не инструмент. За всю вещь он делает четыре вещи,
+   и все четыре — молчание.                                                     */
+
+let AC=null, master=null, cutG=null, voiceG=null, duckG=null, dly=null, fb=null, lp=null,
+    o1=null, o2=null, g2=null, soundOn=true, lastF=180;
+
+function audioInit(){
+  if (AC || !soundOn) return;
+  const C = window.AudioContext || window.webkitAudioContext;
+  if (!C) return;
+  AC = new C();
+  master = AC.createGain();  master.gain.value = 0.28;
+  cutG   = AC.createGain();  cutG.gain.value   = 1;
+  voiceG = AC.createGain();  voiceG.gain.value = 0;
+  lp     = AC.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value = 1400; lp.Q.value = 0.6;
+  dly    = AC.createDelay(20);      dly.delayTime.value = 2.1;
+  fb     = AC.createGain();         fb.gain.value = 0.55;
+
+  o1 = AC.createOscillator(); o1.type = "sine"; o1.frequency.value = lastF;
+  o2 = AC.createOscillator(); o2.type = "sine"; o2.frequency.value = lastF + 3;
+  g2 = AC.createGain(); g2.gain.value = 0;
+
+  o1.connect(voiceG);
+  o2.connect(g2); g2.connect(voiceG);
+  voiceG.connect(lp);
+  voiceG.connect(dly); dly.connect(fb); fb.connect(dly); dly.connect(lp);
+  duckG = AC.createGain(); duckG.gain.value = 1;
+  lp.connect(duckG); duckG.connect(cutG); cutG.connect(master); master.connect(AC.destination);
+  o1.start(); o2.start();
+}
+function audioTick(){
+  if (!AC || AC.state !== "running") return;
+  const t = AC.currentTime, w = S.cr.w;
+  if (w > 0.15){                                   /* при остановке высота замирает */
+    lastF = Math.max(28, Math.min(680, (w/(2*Math.PI)) * 512));
+    o1.frequency.setTargetAtTime(lastF, t, 0.22);
+    o2.frequency.setTargetAtTime(lastF + 3, t, 0.22);
+    const per = Math.max(0.05, Math.min(19, 2*Math.PI/w));
+    dly.delayTime.setTargetAtTime(per, t, 0.6);
+    fb.gain.setTargetAtTime(Math.max(0, Math.min(0.9, Math.exp(-DECAY*per))), t, 0.6);
+  }
+  g2.gain.setTargetAtTime(S.fr.on * 0.55, t, 0.3);
+  voiceG.gain.setTargetAtTime(Math.min(0.42, S.D * 0.26), t, 0.18);
+  lp.frequency.setTargetAtTime(700 + Math.min(1, S.D) * 1600, t, 0.3);
+}
+function audioCut(sec){
+  if (!AC || AC.state !== "running") return;
+  const t = AC.currentTime, g = cutG.gain;
+  g.cancelScheduledValues(t);
+  g.setValueAtTime(g.value, t);
+  g.linearRampToValueAtTime(0.0001, t + 0.04);
+  g.setValueAtTime(0.0001, t + 0.04 + sec);
+  g.linearRampToValueAtTime(1, t + 0.08 + sec);
+}
+function audioHalt(){ if (AC && AC.state === "running") AC.suspend().catch(()=>{}); }
+function audioGo(){ if (AC && soundOn && AC.state === "suspended") AC.resume().catch(()=>{}); }
+
+
+/* ─────────── ГОЛОС ───────────
+   Один голос автора, изогнутый четырьмя способами — ровно та же операция, что в картинке,
+   где один луч с другими числами становится всеми пятерыми. Круг остаётся неискажённым:
+   он единственное настоящее в вещи.                                                        */
+
+const SPK = {
+  t01:"krug",  t02:"zayac", t03:"krug",  t04:"krug",  t05:"volk",  t06:"krug",
+  t07:"volk",  t08:"krug",  t09:"medv",  t10:"krug",  t11:"medv",  t12:"krug",
+  t13:"medv",  t14:"ogon",  t15:"krug",  t16:"ogon",  t17:"krug",  t18:"ogon",
+  t19:"krug",  t20:"ogon",  t21:"krug",  t22:"ogon",  t23:"krug",  t24:"ogon",
+};
+/* rate меняет и высоту, и длительность — длительность реплики пересчитывается из него */
+const BEND = {
+  krug:  {rate:1,    gain:1.00},
+  zayac: {rate:1,    gain:0.62, hp:900,  fade:true},   /* не накапливается: тускнеет и уходит */
+  volk:  {rate:1,    gain:0.85, steps:9},              /* квантуется: ступенчатый */
+  medv:  {rate:0.80, gain:1.05, lp:1600},              /* замедлен и опущен: масса */
+  ogon:  {rate:1,    gain:0.72, beat:14},              /* расстроен сам с собой: биение */
+};
+
+let MAN = null, BUF = {}, golosG = null, loaded = 0;
+function sndLabel(){
+  const b = document.getElementById("snd");
+  if (!b) return;
+  b.textContent = soundOn ? `звук вкл · голос ${loaded}/24` : "звук выкл";
+}
+
+function quantCurve(steps){
+  const n = 1024, c = new Float32Array(n);
+  for (let i=0;i<n;i++){
+    const x = i/(n-1)*2 - 1;
+    c[i] = Math.round(x*steps)/steps;
+  }
+  return c;
+}
+
+async function loadVoices(){
+  if (!AC || MAN) return;
+  try{
+    MAN = window.GOLOS_MAN || await (await fetch("golos/manifest.json")).json();
+  }catch(e){ MAN = {}; return; }
+  golosG = AC.createGain(); golosG.gain.value = 1;
+  const lim = AC.createDynamicsCompressor();
+  lim.threshold.value = -8; lim.ratio.value = 12; lim.attack.value = .004; lim.release.value = .12;
+  golosG.connect(lim); lim.connect(cutG || master);
+  /* длительность строки берём из записи, с поправкой на замедление говорящего */
+  FLAT.forEach(b => {
+    if (!b.v || !MAN[b.v]) return;
+    const r = (BEND[SPK[b.v]] || BEND.krug).rate;
+    b.h = Math.round(MAN[b.v].dur / r * 1000) + 260;
+  });
+  for (const id of Object.keys(MAN)){
+    try{
+      const emb = window.GOLOS && window.GOLOS[id];
+      let ab;
+      if (emb){                       /* вшитый звук: без fetch, иначе его режет политика страницы */
+        const b64 = emb.slice(emb.indexOf(",") + 1);
+        const bin = atob(b64);
+        const u8 = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+        ab = u8.buffer;
+      } else {
+        ab = await (await fetch(`golos/${id}.webm`)).arrayBuffer();
+      }
+      BUF[id] = await AC.decodeAudioData(ab);
+      loaded++; sndLabel();
+    }catch(e){ console.warn("голос", id, e); }
+  }
+}
+
+function playTake(id){
+  if (!AC || AC.state !== "running" || !BUF[id] || !golosG || !soundOn) return;
+  const m = MAN[id], b = BEND[SPK[id] || "krug"], t = AC.currentTime;
+  const mk = (detune) => {
+    const src = AC.createBufferSource();
+    src.buffer = BUF[id];
+    src.playbackRate.value = b.rate;
+    if (detune) src.detune.value = detune;
+    let node = src;
+    if (b.steps){
+      const ws = AC.createWaveShaper();
+      ws.curve = quantCurve(b.steps); ws.oversample = "none";
+      node.connect(ws); node = ws;
+    }
+    if (b.hp){ const f = AC.createBiquadFilter(); f.type="highpass"; f.frequency.value=b.hp;
+               node.connect(f); node = f; }
+    if (b.lp){ const f = AC.createBiquadFilter(); f.type="lowpass"; f.frequency.value=b.lp;
+               node.connect(f); node = f; }
+    const g = AC.createGain();
+    /* выравниваем по замеренному пику дубля: запись тихая и разная от реплики к реплике */
+    const lvl = b.gain * Math.max(1, Math.min(30, 0.85 / (m.peak || 0.06)));
+    g.gain.setValueAtTime(lvl, t);
+    if (b.fade) g.gain.linearRampToValueAtTime(lvl*0.12, t + m.dur/b.rate);
+    node.connect(g); g.connect(golosG);
+    src.start(t, m.start, m.dur);
+    src.stop(t + m.dur/b.rate + 0.05);
+  };
+  mk(0);
+  if (b.beat) mk(b.beat);                     /* второй голос с расстройкой — биение */
+  /* прибор пригибается под речь: поле отступает, когда говорит человек */
+  if (duckG){
+    const g = duckG.gain, len = m.dur / b.rate;
+    g.cancelScheduledValues(t);
+    g.setValueAtTime(g.value, t);
+    g.linearRampToValueAtTime(0.20, t + 0.09);
+    g.setValueAtTime(0.20, t + len);
+    g.linearRampToValueAtTime(1, t + len + 0.45);
+  }
+}
+
+/* ─────────── ХОД ─────────── */
+const elPart = document.getElementById("part");
+const elPanel = document.getElementById("panel"), btnPlay = document.getElementById("play");
+
+const FLAT=[]; STAGE.forEach((p,pi)=>p.beats.forEach((b,bi)=>FLAT.push({...b,pi,first:bi===0,partName:p.part})));
+const START = STAGE.map((_,i)=>FLAT.findIndex(b=>b.pi===i));
+
+let idx=-1, clock=0, rate=1, running=false, started=false, last=0, acc=0;
+const STEP = 1/60;
+
+function reset(){
+  S.T=0;
+  S.cr={th:0,w:0,tw:0,amp:.19,tamp:.19,ink:0,tink:0,wob:1.9,twob:1.9,bend:1,tbend:1};
+  S.gr={th:0,on:0,ton:0,near:.62,tnear:.62};
+  S.wf={th:0,on:0,ton:0,q:0,tq:0,stuck:0,tstuck:0};
+  S.br={on:0,ton:0,amp:.5,tamp:.5,th:0};
+  S.fr={on:0,ton:0,ph:0,blink:0};
+  S.echo=0; S.techo=0; S.cam={u:1,dx:0,dy:0}; S.D=0; DECAY=0.48;
+  prevC=prevG=prevW=prevB=null;
+  words=[]; cursorY=H*0.10; markN=0; finAt=null; wiped=false;
+  cx.globalCompositeOperation="source-over"; cx.globalAlpha=1;
+  cx.fillStyle=paper(); cx.fillRect(0,0,W,H);
+  wx.setTransform(DPR,0,0,DPR,0,0); wx.clearRect(0,0,W,H);
+}
+function seed(upTo){
+  reset();
+  for (let i=0;i<upTo;i++){
+    const b=FLAT[i];
+    if (b.a && ACT[b.a]) ACT[b.a]();
+    if (b.ga){ const nm = Array.isArray(b.ga)?b.ga[0]:b.ga; if (ACT[nm]) ACT[nm](); }
+  }
+  /* доводим состояние и накапливаем след, чтобы часть открывалась не с пустого поля */
+  seeding = true;
+  for (let i=0;i<260;i++){ step(1/26); paint(1/26); }
+  seeding = false;
+}
+let gaDone = false;
+function fireGA(b){
+  if (!b || !b.ga || gaDone) return;
+  const nm = Array.isArray(b.ga) ? b.ga[0] : b.ga;
+  gaDone = true;
+  if (ACT[nm]) ACT[nm]();
+}
+function gaDelay(b){ return Array.isArray(b.ga) ? (b.ga[1]||0) : 0; }
+
+function enter(i){
+  idx=i; clock=0; gaDone=false;
+  const b=FLAT[i]; if (!b) return;
+  if (b.first){ elPart.textContent=b.partName; elPart.classList.add("on"); }
+  if (b.a && ACT[b.a]) ACT[b.a]();
+  layout(b);                       /* слово ложится на лист, а не под картинку */
+  if (b.v) playTake(b.v);
+
+}
+function goPart(pi){
+  const i=START[pi]; seed(i);
+  elPart.textContent=FLAT[i].partName; elPart.classList.add("on");
+  enter(i); running=true; btnPlay.textContent="пауза";
+}
+
+/* один шаг вещи; вынесен, чтобы её можно было прогонять и проверять, а не только смотреть */
+function tick(dt){
+  const b=FLAT[idx];
+  if (b){
+    clock += dt*1000*rate;
+    let guard=40;
+    while (guard-->0){
+      const cur=FLAT[idx];
+      if (clock >= cur.h + gaDelay(cur)) fireGA(cur);
+      if (clock < cur.h+cur.g) break;
+      if (idx+1>=FLAT.length){ running=false; btnPlay.textContent="заново"; break; }
+      const carry=clock-(cur.h+cur.g); enter(idx+1); clock=carry;
+    }
+    const now=FLAT[idx];
+    if (clock >= now.h + gaDelay(now)) fireGA(now);
+  }
+  const d = Math.min(.5, dt*rate);
+  step(d); paint(d);
+}
+
+function frame(ts){
+  requestAnimationFrame(frame);
+  if (!last) last=ts;
+  let dt=(ts-last)/1000; last=ts;
+  if (dt>1.5) dt=1.5;
+  if (started && running){ tick(dt); audioTick(); }
+  else if (started){ const d=Math.min(.25, dt*0.2); step(d); paint(d); }
+}
+
+/* Замер выхода: Клод не слышит, поэтому единственный способ убедиться, что звук
+   действительно выходит, — померить его уровень на выходе анализатором. */
+window.__audioTest = async (id) => {
+  audioInit();
+  if (AC && AC.state !== "running"){ try{ await AC.resume(); }catch(e){} }
+  if (!MAN) await loadVoices();
+  if (!AC || !master) return {error:"нет контекста"};
+  audioTick();                 /* в скрытой вкладке кадры не идут — доводим параметры руками */
+  await new Promise(r=>setTimeout(r,320));
+  const an = AC.createAnalyser(); an.fftSize = 2048;
+  master.connect(an);
+  const data = new Float32Array(an.fftSize);
+  let peakBefore = 0;
+  for (let i=0;i<6;i++){ an.getFloatTimeDomainData(data);
+    for (const v of data) peakBefore = Math.max(peakBefore, Math.abs(v));
+    await new Promise(r=>setTimeout(r,25)); }
+  playTake(id || "t01");
+  let peak = 0;
+  const t0 = performance.now();
+  while (performance.now() - t0 < 1400){
+    an.getFloatTimeDomainData(data);
+    for (const v of data) peak = Math.max(peak, Math.abs(v));
+    await new Promise(r=>setTimeout(r,25));
+  }
+  try{ master.disconnect(an); }catch(e){}
+  audioHalt();                 /* ОБЯЗАТЕЛЬНО: замер не имеет права оставить звук играть */
+  return {state:AC.state, buffers:Object.keys(BUF).length, manifest:MAN?Object.keys(MAN).length:0,
+          golosG: !!golosG, fon:+peakBefore.toFixed(4), sГолосом:+peak.toFixed(4),
+          вывод: peak > peakBefore*1.5 + 0.01 ? "голос выходит" : "ГОЛОСА НА ВЫХОДЕ НЕТ"};
+};
+
+/* прогон вперёд без ожидания кадров — для проверки, не для зрителя */
+window.__run = (sec) => {
+  const D2 = 1/40;
+  for (let i=0; i<Math.round(sec*40); i++) tick(D2);
+  return {line: FLAT[idx] && FLAT[idx].t, w:+S.cr.w.toFixed(2), decay:DECAY,
+          cam:S.cam, ink:+S.cr.ink.toFixed(3), D:+S.D.toFixed(3),
+          take: FLAT[idx] && FLAT[idx].v || null, hold: FLAT[idx] && FLAT[idx].h,
+          buf: Object.keys(BUF).length, man: MAN ? Object.keys(MAN).length : 0};
+};
+requestAnimationFrame(frame);
+
+/* ─────────── пульт ─────────── */
+document.getElementById("begin").addEventListener("click", ()=>{
+  document.getElementById("card").classList.add("gone");
+  started=true; running=true; last=0; reset();
+  audioInit(); audioGo(); loadVoices().then(()=>{}); enter(0);
+});
+btnPlay.addEventListener("click", ()=>{
+  if (idx>=FLAT.length-1 && !running){ seed(0); enter(0); running=true; btnPlay.textContent="пауза"; return; }
+  running=!running; btnPlay.textContent = running?"пауза":"дальше";
+  if (running) audioGo(); else audioHalt();
+});
+document.getElementById("again").addEventListener("click", ()=>{ seed(0); enter(0); running=true; btnPlay.textContent="пауза"; });
+elPanel.querySelectorAll("[data-part]").forEach(b=>b.addEventListener("click",()=>{
+  if (!started){ document.getElementById("card").classList.add("gone"); started=true; }
+  goPart(+b.dataset.part);
+}));
+elPanel.querySelectorAll("[data-rate]").forEach(b=>b.addEventListener("click",()=>{
+  rate=+b.dataset.rate;
+  elPanel.querySelectorAll("[data-rate]").forEach(x=>x.classList.toggle("act",x===b));
+}));
+document.getElementById("snd").addEventListener("click", e=>{
+  soundOn = !soundOn;
+  sndLabel();
+  e.target.classList.toggle("act", soundOn);
+  if (soundOn){ audioInit(); audioGo(); } else audioHalt();
+});
+document.addEventListener("visibilitychange", ()=>{ if (document.hidden) audioHalt(); else if (running) audioGo(); });
+addEventListener("pagehide", audioHalt);
+document.getElementById("tone").addEventListener("click", e=>{
+  const dark = document.documentElement.dataset.tone === "dark";
+  document.documentElement.dataset.tone = dark ? "" : "dark";
+  e.target.textContent = dark ? "на светлом" : "на тёмном";
+  cx.globalCompositeOperation="source-over"; cx.fillStyle=paper(); cx.fillRect(0,0,W,H);
+});
+
+let wake; addEventListener("mousemove", ()=>{
+  elPanel.classList.add("wake"); clearTimeout(wake);
+  wake=setTimeout(()=>elPanel.classList.remove("wake"),2000);
+});
+addEventListener("keydown", e=>{
+  if (e.key===" "){ e.preventDefault(); btnPlay.click(); }
+  if (e.key>="1"&&e.key<="5") goPart(+e.key-1);
+});
+})();
+</script>
